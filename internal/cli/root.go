@@ -104,6 +104,7 @@ func NewRoot(rt *Runtime) *cobra.Command {
 		newFolderCommand(rt), newEnvelopeCommand(rt), newMessageCommand(rt), newAttachmentCommand(rt),
 		newExportCommand(rt), newDoctorCommand(rt), newAgentInfoCommand(rt), newSchemaCommand(rt),
 		newSyncCommand(rt), newLocalSearchCommand(rt),
+		newTriageCommand(rt), newBackupCommand(rt),
 	)
 	return root
 }

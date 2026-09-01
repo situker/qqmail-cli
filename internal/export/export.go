@@ -36,6 +36,7 @@ type Entry struct {
 	From        []mailmodel.Address `json:"from"`
 	Date        time.Time           `json:"date"`
 	Size        int64               `json:"size_bytes"`
+	MessageID   string              `json:"message_id,omitempty"`
 	SHA256      string              `json:"sha256"`
 	Path        string              `json:"path"`
 }
@@ -116,7 +117,7 @@ func Export(ctx context.Context, fetcher Fetcher, named account.Named, ids []mai
 		}
 		parsed := mimeparse.Parse(raw)
 		hash := sha256.Sum256(raw)
-		byID[id.String()] = Entry{ID: id.String(), Folder: folder, FolderRaw: id.Folder, UID: id.UID, UIDValidity: id.UIDValidity, Subject: parsed.Subject, From: parsed.From, Date: parsed.Date, Size: int64(len(raw)), SHA256: hex.EncodeToString(hash[:]), Path: relative}
+		byID[id.String()] = Entry{ID: id.String(), Folder: folder, FolderRaw: id.Folder, UID: id.UID, UIDValidity: id.UIDValidity, Subject: parsed.Subject, From: parsed.From, Date: parsed.Date, Size: int64(len(raw)), MessageID: parsed.MessageID, SHA256: hex.EncodeToString(hash[:]), Path: relative}
 		result.Exported++
 	}
 	manifest.Messages = manifest.Messages[:0]

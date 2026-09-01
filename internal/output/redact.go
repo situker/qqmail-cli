@@ -2,6 +2,7 @@ package output
 
 import (
 	"encoding/base64"
+	"fmt"
 	"regexp"
 	"strings"
 	"sync"
@@ -21,6 +22,25 @@ func RegisterSecret(secret string) {
 	secretMu.Lock()
 	defer secretMu.Unlock()
 	secrets = append(secrets, secret, base64.StdEncoding.EncodeToString([]byte(secret)))
+}
+
+// SanitizeMarkdown neutralizes terminal controls, bidi overrides, line breaks,
+// and Markdown punctuation in untrusted email fields before human review.
+func SanitizeMarkdown(value string) string {
+	value = SanitizeHuman(value)
+	var builder strings.Builder
+	for _, r := range value {
+		if strings.ContainsRune(`\\`+"`*_{}[]()#+-.!|><&", r) || r == '\r' || r == '\n' {
+			if r == '\r' || r == '\n' {
+				builder.WriteByte(' ')
+			} else {
+				_, _ = fmt.Fprintf(&builder, "&#%d;", r)
+			}
+			continue
+		}
+		builder.WriteRune(r)
+	}
+	return builder.String()
 }
 
 func RedactString(value string) string {

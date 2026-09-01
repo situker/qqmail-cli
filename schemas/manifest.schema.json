@@ -25,6 +25,7 @@
           "from": {"type": "array"},
           "date": {"type": "string", "format": "date-time"},
           "size_bytes": {"type": "integer", "minimum": 0},
+          "message_id": {"type": "string"},
           "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
           "path": {"type": "string"}
         },
@@ -34,4 +35,3 @@
   },
   "additionalProperties": false
 }
-

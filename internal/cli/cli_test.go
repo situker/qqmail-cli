@@ -14,6 +14,7 @@ import (
 
 	jsonschema "github.com/santhosh-tekuri/jsonschema/v6"
 	"github.com/situker/qqmailctl/internal/account"
+	"github.com/situker/qqmailctl/internal/cleanupplan"
 	"github.com/situker/qqmailctl/internal/imapx"
 	"github.com/situker/qqmailctl/internal/index"
 	"github.com/situker/qqmailctl/internal/mailmodel"
@@ -38,7 +39,7 @@ func (fakeReader) FetchHeaderFields(context.Context, []uint32) ([]mailmodel.Head
 }
 func (fakeReader) FetchMessage(context.Context, mailmodel.MsgID) ([]byte, error) { return nil, nil }
 func (fakeReader) FetchBodyPeek(context.Context, mailmodel.MsgID, int64) ([]byte, bool, error) {
-	return nil, false, nil
+	return []byte("From: sender@example.com\r\nSubject: fixture\r\nMessage-ID: <fixture@example.com>\r\n\r\nbody\r\n"), false, nil
 }
 func (fakeReader) Logout(context.Context) error { return nil }
 
@@ -139,12 +140,27 @@ func TestSyncAndLocalSearchMatchSchemas(t *testing.T) {
 		t.Fatal(err)
 	}
 	cachePath := filepath.Join(t.TempDir(), "cache.db")
+	planPath := filepath.Join(t.TempDir(), "plan.json")
+	markdownPath := filepath.Join(t.TempDir(), "plan.md")
+	backupPlanPath := filepath.Join(t.TempDir(), "backup-plan.json")
+	backupDir := filepath.Join(t.TempDir(), "backup")
+	backupID := mailmodel.MsgID{Folder: "INBOX", UIDValidity: 1, UID: 1}.String()
+	if err := cleanupplan.Save(backupPlanPath, cleanupplan.Plan{
+		Schema: cleanupplan.Schema, CreatedAt: time.Now().UTC(),
+		Items:      []cleanupplan.Item{{ID: backupID, Category: "other", Reason: "fixture", Evidence: []string{"fixture"}, From: []mailmodel.Address{}, Subject: "fixture", Date: time.Now().UTC(), SizeBytes: 1}},
+		Statistics: cleanupplan.Statistics{TotalCount: 1, TotalSizeBytes: 1, ByCategory: map[string]int{"other": 1}, ByFromDomain: map[string]int{"example.com": 1}},
+	}); err != nil {
+		t.Fatal(err)
+	}
 	for _, tc := range []struct {
 		args   []string
 		schema string
 	}{
 		{[]string{"--config", configPath, "--json", "sync"}, "sync.schema.json"},
 		{[]string{"--config", configPath, "--json", "search", "hello", "--local"}, "search.schema.json"},
+		{[]string{"--config", configPath, "--json", "triage", "analyze"}, "triage.analyze.schema.json"},
+		{[]string{"--config", configPath, "--json", "triage", "plan", "--output", planPath, "--markdown", markdownPath}, "triage.plan.schema.json"},
+		{[]string{"--config", configPath, "--json", "backup", "--plan", backupPlanPath, "--output", backupDir}, "backup.schema.json"},
 	} {
 		var out bytes.Buffer
 		rt := &Runtime{

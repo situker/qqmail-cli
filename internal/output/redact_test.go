@@ -21,3 +21,10 @@ func TestSanitizeHuman(t *testing.T) {
 		t.Fatalf("controls not removed: %q", got)
 	}
 }
+
+func TestSanitizeMarkdown(t *testing.T) {
+	got := SanitizeMarkdown("[click](x)|ok\nnext\x1b[31m")
+	if strings.ContainsAny(got, "[]()|\n\x1b") {
+		t.Fatalf("Markdown syntax survived sanitization: %q", got)
+	}
+}

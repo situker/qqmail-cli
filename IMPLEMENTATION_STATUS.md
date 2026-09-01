@@ -37,6 +37,8 @@ v0.2 and v0.3 development is in progress. Completed slices remain independently 
 - `sync`: all selectable folders are read with EXAMINE/PEEK semantics; new UIDs are fetched above `last_seen_uid`, the recent 200-message window refreshes flags, and classification headers are fetched without downloading bodies. `--cache-previews` and `--cache-bodies` are explicit opt-ins; both fields remain SQL NULL by default.
 - `search <query> --local`: FTS5 local search with an application-generated character-bigram shadow column for Chinese queries.
 - Contract schemas and command-level schema tests are present for `sync` and `search`.
+- `triage analyze` and `triage plan`: deterministic built-in classification, domain/age/size/unread-rate buckets, bounded user TOML regular-expression rules, embedded plan-schema validation, and a sender-grouped Markdown review whose untrusted fields are control/bidi stripped and Markdown entity-escaped.
+- `backup --plan`: reuses the `.eml` export/HMAC engine, merges into one manifest, verifies the completed local backup, and only then records the absolute `backup_root` in the schema-valid plan. Manifest entries now add the optional `message_id` server-truth comparison key.
 
 ## Externally blocked / deliberately not performed
 
