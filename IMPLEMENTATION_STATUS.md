@@ -29,6 +29,15 @@ This repository implements the v0.1, v0.2 and v0.3 development surfaces requeste
 - Owner-operated live QQ Mail smoke on Windows (2026-09-01) — authorization verified and saved, unread envelope listing and message reading succeeded, and both a second CLI query and the QQ web UI confirmed that `message show` preserved the unread state. The redacted observation is in `docs/compat/qq-20260901.md`.
 - Read-only S1/S2/S3/S5/S6/S7/S10 observations (2026-09-01) — capability/authentication/search/UIDVALIDITY/short-IDLE/visibility-baseline/STARTTLS evidence is recorded in `docs/compat/qq-20260901-readonly-spikes.md`. All raw mailbox counts and hashes remain in Git-ignored local output.
 
+Final `0.3.0-dev` verification pass on 2026-09-01:
+
+- `go test ./...` — every package passed, including schema contracts, readonly/static mutation guards, no-bare-EXPUNGE wire assertions, MIME/threading/allowlist tests, audit-content exclusion and SMTP error mapping.
+- `go vet ./...` — passed; `golangci-lint run` — 0 issues; `govulncheck ./...` — no vulnerabilities found.
+- `CGO_ENABLED=0 go build -o bin/qqmailctl.exe ./cmd/qqmailctl` — passed; `version --json` reports `0.3.0-dev`; `scripts/smoke-ps51.ps1` passed with `read`, `mutate`, `destructive` and `send` risks present.
+- Skill Creator `quick_validate.py` — `Skill is valid!` after the v0.3 Skill rewrite.
+- `goreleaser check` — configuration valid; final `goreleaser build --snapshot --clean` produced exactly six binaries: Windows, macOS and Linux on amd64 and arm64.
+- No real SMTP submission or real-account server mutation was part of this pass.
+
 ## v0.2 implemented
 
 - SQLite index foundation: `modernc.org/sqlite` v1.57.0, numbered `PRAGMA user_version` migration, WAL, 5-second busy timeout, OS-level single-writer file lock, external-content FTS5, per-folder UID watermarks, UIDVALIDITY reset semantics, and audit storage.
