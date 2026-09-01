@@ -34,3 +34,7 @@ qqmailctl 是独立的第三方开源项目，与腾讯及 QQ 邮箱不存在隶
 - [安全策略](../SECURITY.md)
 - [行为准则](../CODE_OF_CONDUCT.md)
 - [变更日志](../CHANGELOG.md)
+
+---
+
+维护者：**司徒K** ｜ 公众号：**司徒K** ｜ 个人网站：[www.situking.com](https://www.situking.com)
