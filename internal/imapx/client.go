@@ -250,7 +250,7 @@ func (c *Client) Search(ctx context.Context, filter SearchFilter) ([]uint32, err
 	if err != nil {
 		return nil, err
 	}
-	ids := data.AllUIDs()
+	ids := filterUIDWindow(data.AllUIDs(), filter)
 	sort.Slice(ids, func(i, j int) bool { return ids[i] > ids[j] })
 	if filter.Limit > 0 && len(ids) > filter.Limit {
 		ids = ids[:filter.Limit]
@@ -260,6 +260,27 @@ func (c *Client) Search(ctx context.Context, filter SearchFilter) ([]uint32, err
 		result[i] = uint32(id)
 	}
 	return result, nil
+}
+
+// filterUIDWindow drops UIDs outside the requested window. RFC 3501 defines
+// "N:*" as always matching the highest UID in the mailbox even when N exceeds
+// it, so a watermark search with no new mail still returns the newest message;
+// without this filter watch/sync would re-announce it on every poll.
+func filterUIDWindow(ids []imap.UID, filter SearchFilter) []imap.UID {
+	if filter.AfterUID == 0 && filter.BeforeUID <= 1 {
+		return ids
+	}
+	filtered := ids[:0]
+	for _, id := range ids {
+		if filter.AfterUID > 0 && uint32(id) <= filter.AfterUID {
+			continue
+		}
+		if filter.BeforeUID > 1 && uint32(id) >= filter.BeforeUID {
+			continue
+		}
+		filtered = append(filtered, id)
+	}
+	return filtered
 }
 
 func (c *Client) FetchHeaderFields(ctx context.Context, ids []uint32) ([]mailmodel.HeaderFields, error) {

@@ -30,6 +30,11 @@ type Failure struct {
 type GateResult struct {
 	Eligible []Eligible `json:"eligible"`
 	Failures []Failure  `json:"failures"`
+	// AlreadyGone lists plan entries that no longer exist on the server while a
+	// verified local backup is present. They are safe to skip: the mail cannot
+	// be lost (the backup passed the local gate) and re-running a partially
+	// executed plan must not dead-end the remaining messages.
+	AlreadyGone []Failure `json:"already_gone"`
 }
 
 func Verify(ctx context.Context, reader imapx.Reader, plan cleanupplan.Plan, named account.Named, provider secrets.Provider, paranoid bool) (GateResult, error) {
@@ -47,7 +52,7 @@ func Verify(ctx context.Context, reader imapx.Reader, plan cleanupplan.Plan, nam
 	for _, entry := range manifest.Messages {
 		byID[entry.ID] = entry
 	}
-	result := GateResult{Eligible: []Eligible{}, Failures: []Failure{}}
+	result := GateResult{Eligible: []Eligible{}, Failures: []Failure{}, AlreadyGone: []Failure{}}
 	seen := map[string]bool{}
 	for _, item := range plan.Items {
 		if seen[item.ID] {
@@ -79,12 +84,31 @@ func Verify(ctx context.Context, reader imapx.Reader, plan cleanupplan.Plan, nam
 			continue
 		}
 		envelopes, fetchErr := reader.FetchEnvelopes(ctx, id.Folder, uidValidity, []uint32{id.UID})
-		if fetchErr != nil || len(envelopes) != 1 || envelopes[0].Size != entry.Size {
+		if fetchErr != nil {
+			result.Failures = append(result.Failures, Failure{ID: item.ID, Gate: "server", Reason: "server envelope fetch failed"})
+			continue
+		}
+		if len(envelopes) == 0 {
+			// Absent on the server but fully backed up locally (the manifest
+			// gate already passed): typically a re-run of a partially executed
+			// plan, or the message was moved/deleted elsewhere.
+			result.AlreadyGone = append(result.AlreadyGone, Failure{ID: item.ID, Gate: "server", Reason: "message no longer exists on the server; verified local backup is present"})
+			continue
+		}
+		if len(envelopes) != 1 || envelopes[0].Size != entry.Size {
 			result.Failures = append(result.Failures, Failure{ID: item.ID, Gate: "server", Reason: "RFC822.SIZE does not match verified backup"})
 			continue
 		}
+		if hasServerFlag(envelopes[0].Flags, `\Flagged`) {
+			result.Failures = append(result.Failures, Failure{ID: item.ID, Gate: "server", Reason: "message is flagged (starred) on the server; flagged mail is protected from cleanup"})
+			continue
+		}
 		headers, headerErr := reader.FetchHeaderFields(ctx, []uint32{id.UID})
-		if headerErr != nil || len(headers) != 1 || normalizeMessageID(headers[0].MessageID) != normalizeMessageID(entry.MessageID) {
+		if headerErr != nil {
+			result.Failures = append(result.Failures, Failure{ID: item.ID, Gate: "server", Reason: "server header fetch failed"})
+			continue
+		}
+		if len(headers) != 1 || normalizeMessageID(headers[0].MessageID) != normalizeMessageID(entry.MessageID) {
 			result.Failures = append(result.Failures, Failure{ID: item.ID, Gate: "server", Reason: "Message-ID does not match verified backup"})
 			continue
 		}
@@ -129,4 +153,13 @@ func TrashFolder(ctx context.Context, reader imapx.Reader) (string, error) {
 
 func normalizeMessageID(value string) string {
 	return strings.ToLower(strings.Trim(strings.TrimSpace(value), "<>"))
+}
+
+func hasServerFlag(flags []string, want string) bool {
+	for _, flag := range flags {
+		if strings.EqualFold(flag, want) {
+			return true
+		}
+	}
+	return false
 }

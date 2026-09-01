@@ -46,6 +46,50 @@ type Analysis struct {
 	ByAgeBucket    map[string]Bucket `json:"by_age_bucket"`
 	BySizeBucket   map[string]Bucket `json:"by_size_bucket"`
 	CustomRules    int               `json:"custom_rules"`
+	PlanEligible   int               `json:"plan_eligible"`
+	ExcludedByRule map[string]int    `json:"excluded_by_rule"`
+}
+
+// DefaultCleanupCategories is the closed set of categories a plan may target
+// unless the operator explicitly widens it. "keep", "verification", "receipt",
+// "other" and every custom category stay out of cleanup plans by default so a
+// generated plan is never an "empty the whole mailbox" instruction.
+var DefaultCleanupCategories = []string{"marketing", "machine_notification", "social_notification"}
+
+// Options bounds which classified messages may enter a cleanup plan. The zero
+// value is intentionally useless: callers must go through NewOptions so every
+// safety default is applied.
+type Options struct {
+	Categories    map[string]bool
+	MinConfidence float64
+	OlderThan     time.Time // zero disables the age floor
+	Folders       map[string]bool
+}
+
+func NewOptions(include, exclude []string, minConfidence float64, olderThan time.Time, folders []string) Options {
+	categories := map[string]bool{}
+	for _, category := range DefaultCleanupCategories {
+		categories[normalizeToken(category)] = true
+	}
+	for _, category := range include {
+		if token := normalizeToken(category); token != "" {
+			categories[token] = true
+		}
+	}
+	for _, category := range exclude {
+		delete(categories, normalizeToken(category))
+	}
+	folderSet := map[string]bool{}
+	for _, folder := range folders {
+		if token := normalizeToken(folder); token != "" {
+			folderSet[token] = true
+		}
+	}
+	return Options{Categories: categories, MinConfidence: minConfidence, OlderThan: olderThan, Folders: folderSet}
+}
+
+func normalizeToken(value string) string {
+	return strings.ToLower(strings.TrimSpace(value))
 }
 
 var (
@@ -91,9 +135,9 @@ func ParseRules(raw []byte) ([]Rule, error) {
 	return file.Rules, nil
 }
 
-func Build(messages []index.Message, rules []Rule, now time.Time) (cleanupplan.Plan, Analysis) {
+func Build(messages []index.Message, rules []Rule, now time.Time, opts Options) (cleanupplan.Plan, Analysis) {
 	plan := cleanupplan.Plan{Schema: cleanupplan.Schema, CreatedAt: now.UTC(), Items: []cleanupplan.Item{}, Statistics: cleanupplan.Statistics{ByCategory: map[string]int{}, ByFromDomain: map[string]int{}}}
-	analysis := Analysis{ByCategory: map[string]Bucket{}, ByFromDomain: map[string]Bucket{}, ByAgeBucket: map[string]Bucket{}, BySizeBucket: map[string]Bucket{}, CustomRules: len(rules)}
+	analysis := Analysis{ByCategory: map[string]Bucket{}, ByFromDomain: map[string]Bucket{}, ByAgeBucket: map[string]Bucket{}, BySizeBucket: map[string]Bucket{}, CustomRules: len(rules), ExcludedByRule: map[string]int{}}
 	for _, message := range messages {
 		category, confidence, reason, evidence := classify(message, rules)
 		date := message.DateHeader
@@ -103,11 +147,6 @@ func Build(messages []index.Message, rules []Rule, now time.Time) (cleanupplan.P
 		if date.IsZero() {
 			date = time.Unix(0, 0).UTC()
 		}
-		from := []mailmodel.Address{}
-		if message.FromAddr != "" || message.FromName != "" {
-			from = append(from, mailmodel.Address{Name: message.FromName, Email: message.FromAddr})
-		}
-		plan.Items = append(plan.Items, cleanupplan.Item{ID: message.ID, Category: category, Confidence: confidence, Reason: reason, Evidence: evidence, From: from, Subject: message.Subject, Date: date, SizeBytes: message.SizeBytes})
 		domain := fromDomain(message.FromAddr)
 		if domain == "" {
 			domain = "(unknown)"
@@ -117,13 +156,23 @@ func Build(messages []index.Message, rules []Rule, now time.Time) (cleanupplan.P
 		addBucket(analysis.ByFromDomain, domain, message.SizeBytes, unread)
 		addBucket(analysis.ByAgeBucket, ageBucket(now, message.InternalDate), message.SizeBytes, unread)
 		addBucket(analysis.BySizeBucket, sizeBucket(message.SizeBytes), message.SizeBytes, unread)
+		analysis.TotalCount++
+		analysis.TotalSizeBytes += message.SizeBytes
+		if excluded := excludeReason(message, category, confidence, date, now, opts); excluded != "" {
+			analysis.ExcludedByRule[excluded]++
+			continue
+		}
+		from := []mailmodel.Address{}
+		if message.FromAddr != "" || message.FromName != "" {
+			from = append(from, mailmodel.Address{Name: message.FromName, Email: message.FromAddr})
+		}
+		plan.Items = append(plan.Items, cleanupplan.Item{ID: message.ID, Category: category, Confidence: confidence, Reason: reason, Evidence: evidence, From: from, Subject: message.Subject, Date: date, SizeBytes: message.SizeBytes})
 		plan.Statistics.TotalCount++
 		plan.Statistics.TotalSizeBytes += message.SizeBytes
 		plan.Statistics.ByCategory[category]++
 		plan.Statistics.ByFromDomain[domain]++
 	}
-	analysis.TotalCount = plan.Statistics.TotalCount
-	analysis.TotalSizeBytes = plan.Statistics.TotalSizeBytes
+	analysis.PlanEligible = plan.Statistics.TotalCount
 	finalizeRates(analysis.ByCategory)
 	finalizeRates(analysis.ByFromDomain)
 	finalizeRates(analysis.ByAgeBucket)
@@ -135,6 +184,28 @@ func Build(messages []index.Message, rules []Rule, now time.Time) (cleanupplan.P
 		return plan.Items[i].Category < plan.Items[j].Category
 	})
 	return plan, analysis
+}
+
+// excludeReason returns why a classified message must stay out of the cleanup
+// plan, or "" when it is eligible. The flagged check has no override: a starred
+// message is an explicit human signal that outranks every rule.
+func excludeReason(message index.Message, category string, confidence float64, date, now time.Time, opts Options) string {
+	if hasFlag(message.Flags, `\Flagged`) {
+		return "flagged"
+	}
+	if len(opts.Folders) > 0 && !opts.Folders[normalizeToken(message.Folder)] {
+		return "folder_out_of_scope"
+	}
+	if !opts.Categories[normalizeToken(category)] {
+		return "category_not_targeted"
+	}
+	if confidence < opts.MinConfidence {
+		return "low_confidence"
+	}
+	if !opts.OlderThan.IsZero() && !date.Before(opts.OlderThan) {
+		return "too_recent"
+	}
+	return ""
 }
 
 func classify(message index.Message, rules []Rule) (string, float64, string, []string) {

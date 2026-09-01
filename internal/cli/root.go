@@ -230,8 +230,14 @@ func writeDetailed(rt *Runtime, cmd *cobra.Command, data any, warnings []output.
 	if warnings == nil {
 		warnings = []output.Warning{}
 	}
+	rt.notePartial(warnings)
+	return output.WriteJSON(rt.Out, output.Envelope{SchemaVersion: output.SchemaVersion, Command: commandName(cmd), OK: true, Data: data, Error: nil, Warnings: warnings, Meta: meta})
+}
+
+// notePartial makes exit code 70 independent of the output mode: a partially
+// failed batch must signal partial success to scripts in text mode too.
+func (rt *Runtime) notePartial(warnings []output.Warning) {
 	if len(warnings) > 0 {
 		rt.resultCode = output.ExitPartial
 	}
-	return output.WriteJSON(rt.Out, output.Envelope{SchemaVersion: output.SchemaVersion, Command: commandName(cmd), OK: true, Data: data, Error: nil, Warnings: warnings, Meta: meta})
 }

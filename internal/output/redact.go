@@ -52,6 +52,20 @@ func RedactString(value string) string {
 	return value
 }
 
+// SanitizeLine is SanitizeHuman for single-line contexts (table cells, TTY
+// confirmation summaries, filenames). A decoded RFC 2047 subject may carry real
+// newlines; flattening them stops one message from forging what looks like
+// another row in front of a human or an stdout-reading agent.
+func SanitizeLine(value string) string {
+	value = SanitizeHuman(value)
+	return strings.Map(func(r rune) rune {
+		if r == '\r' || r == '\n' || r == '\t' {
+			return ' '
+		}
+		return r
+	}, value)
+}
+
 // SanitizeHuman removes terminal controls and bidi overrides from untrusted
 // strings. JSON output deliberately preserves the original data.
 func SanitizeHuman(value string) string {
