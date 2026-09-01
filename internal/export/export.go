@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/situker/qqmailctl/internal/account"
+	"github.com/situker/qqmailctl/internal/errmap"
 	"github.com/situker/qqmailctl/internal/imapx"
 	"github.com/situker/qqmailctl/internal/mailmodel"
 	"github.com/situker/qqmailctl/internal/mimeparse"
@@ -60,6 +61,17 @@ type Result struct {
 	Skipped      int      `json:"skipped"`
 	Verified     int      `json:"verified"`
 	Failures     []string `json:"failures"`
+	// FailureDetails carries the classified error per failed message so agents
+	// can decide what to retry; Failures keeps the original string shape for
+	// contract compatibility.
+	FailureDetails []FailureEntry `json:"failure_details"`
+}
+
+type FailureEntry struct {
+	ID        string `json:"id"`
+	Code      string `json:"code"`
+	Reason    string `json:"reason"`
+	Retryable bool   `json:"retryable"`
 }
 
 func Export(ctx context.Context, fetcher Fetcher, named account.Named, ids []mailmodel.MsgID, outputDir string, keyring secrets.Provider, toolVersion string) (Result, error) {
@@ -85,7 +97,11 @@ func Export(ctx context.Context, fetcher Fetcher, named account.Named, ids []mai
 	for _, entry := range manifest.Messages {
 		byID[entry.ID] = entry
 	}
-	result := Result{ManifestPath: manifestPath, Failures: []string{}}
+	result := Result{ManifestPath: manifestPath, Failures: []string{}, FailureDetails: []FailureEntry{}}
+	recordFailure := func(id mailmodel.MsgID, code, reason string, retryable bool) {
+		result.Failures = append(result.Failures, id.String()+": "+reason)
+		result.FailureDetails = append(result.FailureDetails, FailureEntry{ID: id.String(), Code: code, Reason: reason, Retryable: retryable})
+	}
 	for _, id := range ids {
 		select {
 		case <-ctx.Done():
@@ -101,18 +117,20 @@ func Export(ctx context.Context, fetcher Fetcher, named account.Named, ids []mai
 		}
 		raw, truncated, err := fetcher.FetchBodyPeek(ctx, id, imapx.MaxMessageBytes)
 		if err != nil {
-			result.Failures = append(result.Failures, id.String()+": "+err.Error())
+			detail, _ := errmap.Details(err)
+			recordFailure(id, detail.Code, err.Error(), detail.Retryable)
 			continue
 		}
 		if truncated {
-			result.Failures = append(result.Failures, id.String()+": message exceeds 64 MiB export limit")
+			// A permanent condition: retrying cannot shrink the message.
+			recordFailure(id, "parse_error", "message exceeds 64 MiB export limit", false)
 			continue
 		}
 		folder := safeio.SanitizeFilename(id.Folder, "folder")
 		relative := filepath.ToSlash(filepath.Join(folder, fmt.Sprintf("%d-%d.eml", id.UIDValidity, id.UID)))
 		absolute := filepath.Join(root, filepath.FromSlash(relative))
 		if err := writeAtomic(absolute, raw, 0o600); err != nil {
-			result.Failures = append(result.Failures, id.String()+": "+err.Error())
+			recordFailure(id, "internal", err.Error(), false)
 			continue
 		}
 		parsed := mimeparse.Parse(raw)
@@ -154,7 +172,7 @@ func Verify(outputDir string, named account.Named, keyring secrets.Provider) (Re
 	if err := verifySignature(manifest, key); err != nil {
 		return Result{}, err
 	}
-	result := Result{ManifestPath: manifestPath, Failures: []string{}}
+	result := Result{ManifestPath: manifestPath, Failures: []string{}, FailureDetails: []FailureEntry{}}
 	for _, entry := range manifest.Messages {
 		absolute := filepath.Join(root, filepath.FromSlash(entry.Path))
 		rel, relErr := filepath.Rel(root, absolute)

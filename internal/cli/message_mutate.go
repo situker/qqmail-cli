@@ -22,6 +22,9 @@ func newMessageMarkReadCommand(rt *Runtime) *cobra.Command {
 		if err != nil {
 			return err
 		}
+		if err := requireFolderConsistency(cmd, rt, ids); err != nil {
+			return err
+		}
 		if !execute {
 			return writeMutationDryRun(rt, cmd, len(ids), map[string]any{"action": "mark_read"})
 		}
@@ -68,6 +71,9 @@ func newMessageMoveCommand(rt *Runtime) *cobra.Command {
 		destination := args[len(args)-1]
 		ids, err := parseMessageIDs(args[:len(args)-1])
 		if err != nil {
+			return err
+		}
+		if err := requireFolderConsistency(cmd, rt, ids); err != nil {
 			return err
 		}
 		if !execute {
@@ -168,6 +174,10 @@ func writeMutationResult(rt *Runtime, cmd *cobra.Command, accountName string, re
 	if rt.JSON {
 		return writeDetailed(rt, cmd, data, warnings, output.Meta{Account: accountName, Skipped: len(warnings)})
 	}
+	rt.notePartial(warnings)
 	_, err := fmt.Fprintf(rt.Out, "完成 %d/%d。\n", len(completed), requested)
+	for _, warning := range warnings {
+		_, _ = fmt.Fprintf(rt.Err, "失败 %s：%s\n", warning.ID, output.SanitizeLine(warning.Message))
+	}
 	return err
 }

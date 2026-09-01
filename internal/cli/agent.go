@@ -34,7 +34,7 @@ func newAgentInfoCommand(rt *Runtime) *cobra.Command {
 			"cli_version": rt.Build.Version, "protocol_version": "1", "schema_versions": map[string]string{"output": "1", "manifest": "1", "plan": "1"},
 			"commands": commands, "risk_levels": []string{"read", "mutate", "destructive", "send"}, "readonly": policy.Readonly(),
 			"env_switches":    []string{"QQMAILCTL_READONLY", "QQMAILCTL_AUTH_CODE"},
-			"untrusted_paths": []string{"data.envelopes[].subject", "data.envelopes[].from", "data.messages[].subject", "data.messages[].body", "data.attachments[].filename", "data.hits[].subject", "data.hits[].from_addr", "data.hits[].snippet", "$watch_event.envelope.subject", "$watch_event.envelope.from", "plan.items[].subject", "plan.items[].from", "data.summary.from", "data.summary.to[]", "data.summary.cc[]", "data.summary.bcc[]", "data.summary.subject", "data.summary.body_summary", "data.summary.attachments[].filename"},
+			"untrusted_paths": []string{"data.envelopes[].subject", "data.envelopes[].from", "data.envelopes[].to", "data.envelopes[].folder", "data.folders[].name", "data.messages[].subject", "data.messages[].body", "data.messages[].from", "data.messages[].to", "data.messages[].raw_base64", "data.attachments[].filename", "data.hits[].subject", "data.hits[].from_addr", "data.hits[].snippet", "data.destination", "data.trash_folder", "data.located[].restore_to", "$watch_event.envelope.subject", "$watch_event.envelope.from", "$watch_event.folder", "plan.items[].subject", "plan.items[].from", "data.summary.from", "data.summary.to[]", "data.summary.cc[]", "data.summary.bcc[]", "data.summary.subject", "data.summary.body_summary", "data.summary.attachments[].filename"},
 			"account":         accountInfo, "configured": configured,
 		}
 		// agent-info is JSON-only by contract, regardless of the global flag.
@@ -46,7 +46,7 @@ func newAgentInfoCommand(rt *Runtime) *cobra.Command {
 func newSchemaCommand(rt *Runtime) *cobra.Command {
 	aliases := map[string]string{
 		"version": "version.schema.json", "manifest": "manifest.schema.json", "plan": "plan.schema.json", "common": "envelope-common.schema.json",
-		"agent-info": "agent-info.schema.json",
+		"agent-info": "agent-info.schema.json", "watch": "watch.event.schema.json",
 	}
 	cmd := &cobra.Command{Use: "schema [command]", Args: cobra.MaximumNArgs(1), Short: "Emit an embedded JSON Schema"}
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {

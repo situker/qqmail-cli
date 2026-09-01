@@ -84,14 +84,14 @@ func newEnvelopeCommand(rt *Runtime) *cobra.Command {
 		}
 		defer func() { _ = reader.Logout(context.Background()) }()
 		filter := imapx.SearchFilter{Unread: opts.Unread, From: opts.From, Subject: opts.Subject, Since: since, BeforeUID: opts.BeforeUID, Limit: opts.Limit}
-		envelopes, mode, err := listEnvelopes(ctx, reader, rt.Folder, filter)
+		envelopes, windowMin, mode, err := listEnvelopes(ctx, reader, rt.Folder, filter)
 		if err != nil {
 			return err
 		}
-		next := uint32(0)
-		if len(envelopes) > 0 {
-			next = envelopes[len(envelopes)-1].UID
-		}
+		// The cursor advances past the lowest UID *examined* this round, not
+		// the lowest returned: a window whose matches were all client-filtered
+		// away must still let the agent keep paging into older mail.
+		next := windowMin
 		data := map[string]any{"envelopes": envelopes, "page": map[string]any{"next_before_uid": next}}
 		if rt.JSON {
 			return writeDetailed(rt, cmd, data, nil, output.Meta{Account: named.Name, SearchMode: mode})
@@ -111,10 +111,10 @@ func newEnvelopeCommand(rt *Runtime) *cobra.Command {
 	return root
 }
 
-func listEnvelopes(ctx context.Context, reader imapx.Reader, folder string, filter imapx.SearchFilter) ([]mailmodel.Envelope, string, error) {
+func listEnvelopes(ctx context.Context, reader imapx.Reader, folder string, filter imapx.SearchFilter) ([]mailmodel.Envelope, uint32, string, error) {
 	uidValidity, _, err := reader.Examine(ctx, folder)
 	if err != nil {
-		return nil, "server", err
+		return nil, 0, "server", err
 	}
 	mode := "server"
 	searchFilter := filter
@@ -131,11 +131,17 @@ func listEnvelopes(ctx context.Context, reader imapx.Reader, folder string, filt
 		ids, err = reader.Search(ctx, searchFilter)
 	}
 	if err != nil {
-		return nil, mode, err
+		return nil, 0, mode, err
+	}
+	windowMin := uint32(0)
+	for _, id := range ids {
+		if windowMin == 0 || id < windowMin {
+			windowMin = id
+		}
 	}
 	items, err := reader.FetchEnvelopes(ctx, folder, uidValidity, ids)
 	if err != nil {
-		return nil, mode, err
+		return nil, windowMin, mode, err
 	}
 	result := make([]mailmodel.Envelope, 0, len(items))
 	for _, item := range items {
@@ -150,7 +156,7 @@ func listEnvelopes(ctx context.Context, reader imapx.Reader, folder string, filt
 			break
 		}
 	}
-	return result, mode, nil
+	return result, windowMin, mode, nil
 }
 
 func containsNonASCII(value string) bool {
@@ -184,16 +190,12 @@ func newMessageShowCommand(rt *Runtime) *cobra.Command {
 		if part == "raw" && !rt.JSON && len(args) != 1 {
 			return &errmap.Error{Kind: errmap.Usage, Message: "人读模式的 --part raw 一次只允许一个 id；批量读取请加 --json"}
 		}
-		ids := make([]mailmodel.MsgID, len(args))
-		for i, value := range args {
-			id, err := mailmodel.ParseMsgID(value)
-			if err != nil {
-				return err
-			}
-			if rt.Folder != "INBOX" && rt.Folder != id.Folder {
-				return &errmap.Error{Kind: errmap.Usage, Message: "--folder 与邮件 id 内嵌文件夹不一致"}
-			}
-			ids[i] = id
+		ids, err := parseMessageIDs(args)
+		if err != nil {
+			return err
+		}
+		if err := requireFolderConsistency(cmd, rt, ids); err != nil {
+			return err
 		}
 		ctx, cancel := rt.context()
 		defer cancel()
@@ -227,7 +229,13 @@ func newMessageShowCommand(rt *Runtime) *cobra.Command {
 				continue
 			}
 			parsed := mimeparse.Parse(raw)
-			parserName = parsed.Parser
+			// A batch that mixes parsers reports "mixed": the per-message
+			// parser field stays authoritative.
+			if parserName == "" {
+				parserName = parsed.Parser
+			} else if parserName != parsed.Parser {
+				parserName = "mixed"
+			}
 			for _, warning := range parsed.Warnings {
 				warnings = append(warnings, output.Warning{Code: "parse_error", Message: warning, ID: id.String(), Retryable: false})
 			}
@@ -273,6 +281,9 @@ func newAttachmentListCommand(rt *Runtime) *cobra.Command {
 		if err != nil {
 			return err
 		}
+		if err := requireFolderConsistency(cmd, rt, []mailmodel.MsgID{id}); err != nil {
+			return err
+		}
 		ctx, cancel := rt.context()
 		defer cancel()
 		reader, named, err := rt.connect(ctx)
@@ -310,6 +321,9 @@ func newAttachmentDownloadCommand(rt *Runtime) *cobra.Command {
 		}
 		id, err := mailmodel.ParseMsgID(args[0])
 		if err != nil {
+			return err
+		}
+		if err := requireFolderConsistency(cmd, rt, []mailmodel.MsgID{id}); err != nil {
 			return err
 		}
 		ctx, cancel := rt.context()

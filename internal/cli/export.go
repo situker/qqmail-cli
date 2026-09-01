@@ -93,7 +93,7 @@ func newExportCommand(rt *Runtime) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			envelopes, _, err := listEnvelopes(ctx, reader, rt.Folder, imapx.SearchFilter{Since: sinceTime, Limit: limit})
+			envelopes, _, _, err := listEnvelopes(ctx, reader, rt.Folder, imapx.SearchFilter{Since: sinceTime, Limit: limit})
 			if err != nil {
 				return err
 			}
@@ -109,14 +109,18 @@ func newExportCommand(rt *Runtime) *cobra.Command {
 		if err != nil {
 			return err
 		}
-		warnings := make([]output.Warning, 0, len(result.Failures))
-		for _, failure := range result.Failures {
-			warnings = append(warnings, output.Warning{Code: "network", Message: failure, Retryable: true})
+		warnings := make([]output.Warning, 0, len(result.FailureDetails))
+		for _, failure := range result.FailureDetails {
+			warnings = append(warnings, output.Warning{Code: failure.Code, Message: failure.Reason, ID: failure.ID, Retryable: failure.Retryable})
 		}
 		if rt.JSON {
 			return writeDetailed(rt, cmd, result, warnings, output.Meta{Account: connected.Name, Skipped: result.Skipped})
 		}
+		rt.notePartial(warnings)
 		_, err = fmt.Fprintf(rt.Out, "导出 %d，跳过 %d；清单：%s\n", result.Exported, result.Skipped, result.ManifestPath)
+		for _, warning := range warnings {
+			_, _ = fmt.Fprintf(rt.Err, "失败 %s：%s\n", warning.ID, output.SanitizeLine(warning.Message))
+		}
 		return err
 	}
 	return cmd

@@ -81,6 +81,9 @@ func newReplyCommand(rt *Runtime) *cobra.Command {
 		if err != nil {
 			return err
 		}
+		if err := requireFolderConsistency(cmd, rt, []mailmodel.MsgID{id}); err != nil {
+			return err
+		}
 		named, err := loadNamedAccount(rt)
 		if err != nil {
 			return err
@@ -139,6 +142,9 @@ func newForwardCommand(rt *Runtime) *cobra.Command {
 		}
 		id, err := mailmodel.ParseMsgID(args[0])
 		if err != nil {
+			return err
+		}
+		if err := requireFolderConsistency(cmd, rt, []mailmodel.MsgID{id}); err != nil {
 			return err
 		}
 		named, err := loadNamedAccount(rt)

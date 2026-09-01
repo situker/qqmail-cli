@@ -39,7 +39,7 @@ func (r *searchModeReader) Logout(context.Context) error { return nil }
 
 func TestNonASCIISearchUsesClientWindow(t *testing.T) {
 	reader := &searchModeReader{}
-	items, mode, err := listEnvelopes(context.Background(), reader, "INBOX", imapx.SearchFilter{Subject: "中文", Limit: 20})
+	items, _, mode, err := listEnvelopes(context.Background(), reader, "INBOX", imapx.SearchFilter{Subject: "中文", Limit: 20})
 	if err != nil {
 		t.Fatal(err)
 	}

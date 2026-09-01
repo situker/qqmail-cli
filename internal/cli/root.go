@@ -11,6 +11,7 @@ import (
 	"github.com/situker/qqmailctl/internal/errmap"
 	"github.com/situker/qqmailctl/internal/imapx"
 	"github.com/situker/qqmailctl/internal/index"
+	"github.com/situker/qqmailctl/internal/mailmodel"
 	"github.com/situker/qqmailctl/internal/output"
 	"github.com/situker/qqmailctl/internal/policy"
 	"github.com/situker/qqmailctl/internal/secrets"
@@ -168,6 +169,22 @@ func NewRoot(rt *Runtime) *cobra.Command {
 		newSendCommand(rt), newReplyCommand(rt), newForwardCommand(rt),
 	)
 	return root
+}
+
+// requireFolderConsistency enforces the frozen §6 contract: the folder inside
+// a message id is the sole authority. An explicitly passed --folder that
+// disagrees is a usage error — never a silent override in either direction.
+func requireFolderConsistency(cmd *cobra.Command, rt *Runtime, ids []mailmodel.MsgID) error {
+	flag := cmd.Root().PersistentFlags().Lookup("folder")
+	if flag == nil || !flag.Changed {
+		return nil
+	}
+	for _, id := range ids {
+		if rt.Folder != id.Folder {
+			return &errmap.Error{Kind: errmap.Usage, Message: fmt.Sprintf("--folder %q 与邮件 id 内嵌文件夹 %q 不一致；id 内嵌的文件夹是唯一权威", rt.Folder, id.Folder)}
+		}
+	}
+	return nil
 }
 
 // requireSubcommand turns a bare parent invocation or an unknown subcommand
