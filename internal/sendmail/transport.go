@@ -92,15 +92,19 @@ func classifySMTP(cause error) error {
 	if errors.As(cause, &smtpError) {
 		message := strings.ToLower(smtpError.Message)
 		if smtpError.Code == 421 || smtpError.Code == 450 || smtpError.Code == 451 || smtpError.Code == 452 || smtpError.Code == 454 || strings.Contains(message, "rate") || strings.Contains(message, "frequency") || strings.Contains(message, "too many") || strings.Contains(message, "limit") {
-			return &errmap.Error{Kind: errmap.RateLimited, Message: "SMTP 发送被服务器限流", Suggestion: "停止重试并至少等待 30 分钟", Cause: cause}
+			return &errmap.Error{Kind: errmap.RateLimited, Message: "SMTP 发送被服务器限流", Suggestion: "停止重试并等待 10-15 分钟", Cause: cause}
 		}
 		if smtpError.Code == 530 || smtpError.Code == 534 || smtpError.Code == 535 {
 			return &errmap.Error{Kind: errmap.AuthFailed, Message: "SMTP 认证失败", Suggestion: "确认 QQ 邮箱 SMTP 已开启且使用的是授权码", Cause: cause}
 		}
 		return &errmap.Error{Kind: errmap.Network, Message: "SMTP 服务器拒绝发送请求", Cause: cause}
 	}
-	if strings.Contains(strings.ToLower(cause.Error()), "rate") || strings.Contains(strings.ToLower(cause.Error()), "too many") {
-		return &errmap.Error{Kind: errmap.RateLimited, Message: "SMTP 发送被服务器限流", Suggestion: "停止重试并至少等待 30 分钟", Cause: cause}
+	lower := strings.ToLower(cause.Error())
+	if strings.Contains(lower, "tls") || strings.Contains(lower, "x509") || strings.Contains(lower, "certificate") {
+		return &errmap.Error{Kind: errmap.TLS, Message: "SMTP TLS 握手或证书校验失败", Suggestion: "检查系统时间、证书链或企业中间人代理", Cause: cause}
+	}
+	if strings.Contains(lower, "rate") || strings.Contains(lower, "too many") {
+		return &errmap.Error{Kind: errmap.RateLimited, Message: "SMTP 发送被服务器限流", Suggestion: "停止重试并等待 10-15 分钟", Cause: cause}
 	}
 	return &errmap.Error{Kind: errmap.Network, Message: "SMTP 连接或发送失败", Cause: cause}
 }
