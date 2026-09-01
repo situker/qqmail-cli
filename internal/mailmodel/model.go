@@ -28,6 +28,15 @@ type Envelope struct {
 	HasAttachments bool      `json:"has_attachments"`
 }
 
+// HeaderFields contains the small set of message headers needed by the local
+// rule engine. Values originate from email and are therefore untrusted data.
+type HeaderFields struct {
+	UID             uint32 `json:"uid"`
+	MessageID       string `json:"message_id"`
+	ListUnsubscribe string `json:"list_unsubscribe"`
+	Precedence      string `json:"precedence"`
+}
+
 type Attachment struct {
 	Index       int    `json:"index"`
 	Filename    string `json:"filename"`

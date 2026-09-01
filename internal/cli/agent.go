@@ -74,5 +74,5 @@ func newSchemaCommand(rt *Runtime) *cobra.Command {
 }
 
 func readonlyCommandNames() []string {
-	return []string{"version", "agent-info", "schema", "completion", "auth.login", "auth.status", "auth.logout", "account.list", "account.use", "doctor", "folder.list", "envelope.list", "message.show", "attachment.list", "attachment.download", "export"}
+	return []string{"version", "agent-info", "schema", "completion", "auth.login", "auth.status", "auth.logout", "account.list", "account.use", "doctor", "folder.list", "envelope.list", "message.show", "attachment.list", "attachment.download", "export", "sync", "search"}
 }

@@ -15,6 +15,7 @@ import (
 	jsonschema "github.com/santhosh-tekuri/jsonschema/v6"
 	"github.com/situker/qqmailctl/internal/account"
 	"github.com/situker/qqmailctl/internal/imapx"
+	"github.com/situker/qqmailctl/internal/index"
 	"github.com/situker/qqmailctl/internal/mailmodel"
 	"github.com/situker/qqmailctl/internal/secrets"
 	projectschemas "github.com/situker/qqmailctl/schemas"
@@ -30,6 +31,9 @@ func (fakeReader) ListFolders(context.Context) ([]mailmodel.Folder, error)      
 func (fakeReader) Examine(context.Context, string) (uint32, uint32, error)      { return 1, 0, nil }
 func (fakeReader) Search(context.Context, imapx.SearchFilter) ([]uint32, error) { return nil, nil }
 func (fakeReader) FetchEnvelopes(context.Context, string, uint32, []uint32) ([]mailmodel.Envelope, error) {
+	return nil, nil
+}
+func (fakeReader) FetchHeaderFields(context.Context, []uint32) ([]mailmodel.HeaderFields, error) {
 	return nil, nil
 }
 func (fakeReader) FetchMessage(context.Context, mailmodel.MsgID) ([]byte, error) { return nil, nil }
@@ -117,6 +121,40 @@ func TestVersionAndAgentInfoMatchSchemas(t *testing.T) {
 	} {
 		var out bytes.Buffer
 		rt := &Runtime{Build: BuildInfo{Version: "test", Commit: "fixture", Date: "2026-09-01"}, Out: &out, Err: &bytes.Buffer{}, In: strings.NewReader("")}
+		root := NewRoot(rt)
+		root.SetArgs(tc.args)
+		if err := root.Execute(); err != nil {
+			t.Fatal(err)
+		}
+		validateOutput(t, tc.schema, out.Bytes())
+	}
+}
+
+func TestSyncAndLocalSearchMatchSchemas(t *testing.T) {
+	configPath := filepath.Join(t.TempDir(), "config.toml")
+	cfg := &account.Config{Schema: account.ConfigSchema, DefaultAccount: "personal", Accounts: map[string]account.Account{
+		"personal": {Email: "user@qq.com"},
+	}}
+	if err := cfg.Save(configPath); err != nil {
+		t.Fatal(err)
+	}
+	cachePath := filepath.Join(t.TempDir(), "cache.db")
+	for _, tc := range []struct {
+		args   []string
+		schema string
+	}{
+		{[]string{"--config", configPath, "--json", "sync"}, "sync.schema.json"},
+		{[]string{"--config", configPath, "--json", "search", "hello", "--local"}, "search.schema.json"},
+	} {
+		var out bytes.Buffer
+		rt := &Runtime{
+			Build: BuildInfo{Version: "test"}, Out: &out, Err: &bytes.Buffer{}, In: strings.NewReader(""),
+			Secrets: &secrets.Memory{Values: map[string]string{"user@qq.com": "abcdefghijklmnop"}},
+			Dial:    func(context.Context, account.Named, string) (imapx.Reader, error) { return fakeReader{}, nil },
+			IndexOpen: func(_ string, write bool) (*index.DB, error) {
+				return index.OpenPath(cachePath, write)
+			},
+		}
 		root := NewRoot(rt)
 		root.SetArgs(tc.args)
 		if err := root.Execute(); err != nil {

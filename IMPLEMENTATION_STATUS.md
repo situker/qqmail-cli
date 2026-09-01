@@ -4,6 +4,8 @@ Updated: 2026-09-01
 
 This repository implements the v0.1 read-only product surface from `TECHNICAL_PLAN.md`. It has not been tagged or published.
 
+v0.2 and v0.3 development is in progress. Completed slices remain independently buildable and are committed only after their quality gates pass.
+
 ## Implemented and locally verified
 
 - M0: standalone Go repository, Apache-2.0, version/completion, stable JSON envelope, semantic exit codes, redaction, schemas, three-platform CI.
@@ -28,6 +30,13 @@ This repository implements the v0.1 read-only product surface from `TECHNICAL_PL
 - Skill Creator `quick_validate.py` — `Skill is valid!`
 - Owner-operated live QQ Mail smoke on Windows (2026-09-01) — authorization verified and saved, unread envelope listing and message reading succeeded, and both a second CLI query and the QQ web UI confirmed that `message show` preserved the unread state. The redacted observation is in `docs/compat/qq-20260901.md`.
 - Read-only S1/S2/S3/S5/S6/S7/S10 observations (2026-09-01) — capability/authentication/search/UIDVALIDITY/short-IDLE/visibility-baseline/STARTTLS evidence is recorded in `docs/compat/qq-20260901-readonly-spikes.md`. All raw mailbox counts and hashes remain in Git-ignored local output.
+
+## v0.2 implementation progress
+
+- SQLite index foundation: `modernc.org/sqlite` v1.57.0, numbered `PRAGMA user_version` migration, WAL, 5-second busy timeout, OS-level single-writer file lock, external-content FTS5, per-folder UID watermarks, UIDVALIDITY reset semantics, and audit storage.
+- `sync`: all selectable folders are read with EXAMINE/PEEK semantics; new UIDs are fetched above `last_seen_uid`, the recent 200-message window refreshes flags, and classification headers are fetched without downloading bodies. `--cache-previews` and `--cache-bodies` are explicit opt-ins; both fields remain SQL NULL by default.
+- `search <query> --local`: FTS5 local search with an application-generated character-bigram shadow column for Chinese queries.
+- Contract schemas and command-level schema tests are present for `sync` and `search`.
 
 ## Externally blocked / deliberately not performed
 

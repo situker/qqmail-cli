@@ -26,6 +26,9 @@ func (r *searchModeReader) Search(_ context.Context, filter imapx.SearchFilter) 
 func (r *searchModeReader) FetchEnvelopes(context.Context, string, uint32, []uint32) ([]mailmodel.Envelope, error) {
 	return []mailmodel.Envelope{{UID: 1, Subject: "中文测试"}}, nil
 }
+func (r *searchModeReader) FetchHeaderFields(context.Context, []uint32) ([]mailmodel.HeaderFields, error) {
+	return nil, nil
+}
 func (r *searchModeReader) FetchMessage(context.Context, mailmodel.MsgID) ([]byte, error) {
 	return nil, nil
 }

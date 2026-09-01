@@ -13,7 +13,7 @@ func TestReaderInterfaceIsReadOnlyWhitelist(t *testing.T) {
 		got[i] = typeOf.Method(i).Name
 	}
 	sort.Strings(got)
-	want := []string{"Capabilities", "Examine", "FetchBodyPeek", "FetchEnvelopes", "FetchMessage", "ListFolders", "Logout", "Search"}
+	want := []string{"Capabilities", "Examine", "FetchBodyPeek", "FetchEnvelopes", "FetchHeaderFields", "FetchMessage", "ListFolders", "Logout", "Search"}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("reader method surface changed; review readonly guarantee\ngot:  %v\nwant: %v", got, want)
 	}

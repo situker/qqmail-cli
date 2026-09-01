@@ -10,6 +10,7 @@ import (
 	"github.com/situker/qqmailctl/internal/account"
 	"github.com/situker/qqmailctl/internal/errmap"
 	"github.com/situker/qqmailctl/internal/imapx"
+	"github.com/situker/qqmailctl/internal/index"
 	"github.com/situker/qqmailctl/internal/output"
 	"github.com/situker/qqmailctl/internal/secrets"
 	"github.com/spf13/cobra"
@@ -35,6 +36,7 @@ type Runtime struct {
 	In          io.Reader
 	Secrets     secrets.Provider
 	Dial        func(context.Context, account.Named, string) (imapx.Reader, error)
+	IndexOpen   func(string, bool) (*index.DB, error)
 	started     time.Time
 	current     string
 	resultCode  int
@@ -74,6 +76,9 @@ func NewRoot(rt *Runtime) *cobra.Command {
 			return imapx.DialWithVersion(ctx, cfg, authCode, rt.Build.Version)
 		}
 	}
+	if rt.IndexOpen == nil {
+		rt.IndexOpen = index.Open
+	}
 	root := &cobra.Command{
 		Use:           "qqmailctl",
 		Short:         "Unofficial read-only QQ Mail CLI",
@@ -98,6 +103,7 @@ func NewRoot(rt *Runtime) *cobra.Command {
 		newVersionCommand(rt), newCompletionCommand(root), newAuthCommand(rt), newAccountCommand(rt),
 		newFolderCommand(rt), newEnvelopeCommand(rt), newMessageCommand(rt), newAttachmentCommand(rt),
 		newExportCommand(rt), newDoctorCommand(rt), newAgentInfoCommand(rt), newSchemaCommand(rt),
+		newSyncCommand(rt), newLocalSearchCommand(rt),
 	)
 	return root
 }

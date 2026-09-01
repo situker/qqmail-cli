@@ -8,6 +8,7 @@ import (
 	"io"
 	"mime"
 	"net"
+	"net/mail"
 	"sort"
 	"strings"
 	"time"
@@ -32,6 +33,7 @@ type SearchFilter struct {
 	Subject   string
 	Since     time.Time
 	BeforeUID uint32
+	AfterUID  uint32
 	Limit     int
 }
 
@@ -43,6 +45,7 @@ type Reader interface {
 	Examine(context.Context, string) (uidValidity uint32, count uint32, err error)
 	Search(context.Context, SearchFilter) ([]uint32, error)
 	FetchEnvelopes(context.Context, string, uint32, []uint32) ([]mailmodel.Envelope, error)
+	FetchHeaderFields(context.Context, []uint32) ([]mailmodel.HeaderFields, error)
 	FetchMessage(context.Context, mailmodel.MsgID) ([]byte, error)
 	FetchBodyPeek(context.Context, mailmodel.MsgID, int64) ([]byte, bool, error)
 	Logout(context.Context) error
@@ -224,8 +227,19 @@ func (c *Client) Search(ctx context.Context, filter SearchFilter) ([]uint32, err
 	if filter.Subject != "" {
 		criteria.Header = append(criteria.Header, imap.SearchCriteriaHeaderField{Key: "Subject", Value: filter.Subject})
 	}
-	if filter.BeforeUID > 1 {
-		criteria.UID = []imap.UIDSet{{imap.UIDRange{Start: 1, Stop: imap.UID(filter.BeforeUID - 1)}}}
+	if filter.AfterUID > 0 || filter.BeforeUID > 1 {
+		start, stop := imap.UID(1), imap.UID(0)
+		if filter.AfterUID > 0 {
+			start = imap.UID(filter.AfterUID + 1)
+		}
+		if filter.BeforeUID > 1 {
+			stop = imap.UID(filter.BeforeUID - 1)
+		}
+		if stop == 0 || start <= stop {
+			criteria.UID = []imap.UIDSet{{imap.UIDRange{Start: start, Stop: stop}}}
+		} else {
+			return []uint32{}, nil
+		}
 	}
 	if err := c.setDeadline(ctx); err != nil {
 		return nil, err
@@ -245,6 +259,43 @@ func (c *Client) Search(ctx context.Context, filter SearchFilter) ([]uint32, err
 	for i, id := range ids {
 		result[i] = uint32(id)
 	}
+	return result, nil
+}
+
+func (c *Client) FetchHeaderFields(ctx context.Context, ids []uint32) ([]mailmodel.HeaderFields, error) {
+	if len(ids) == 0 {
+		return []mailmodel.HeaderFields{}, nil
+	}
+	uids := make([]imap.UID, len(ids))
+	for i, id := range ids {
+		uids[i] = imap.UID(id)
+	}
+	section := &imap.FetchItemBodySection{
+		Specifier:    imap.PartSpecifierHeader,
+		HeaderFields: []string{"Message-ID", "List-Unsubscribe", "Precedence"},
+		Peek:         true,
+	}
+	if err := c.setDeadline(ctx); err != nil {
+		return nil, err
+	}
+	stop := c.watchdog(ctx)
+	defer stop()
+	items, err := c.raw.Fetch(imap.UIDSetNum(uids...), &imap.FetchOptions{UID: true, BodySection: []*imap.FetchItemBodySection{section}}).Collect()
+	if err != nil {
+		return nil, err
+	}
+	result := make([]mailmodel.HeaderFields, 0, len(items))
+	for _, item := range items {
+		fields := mailmodel.HeaderFields{UID: uint32(item.UID)}
+		message, readErr := mail.ReadMessage(strings.NewReader(string(item.FindBodySection(section))))
+		if readErr == nil {
+			fields.MessageID = strings.TrimSpace(message.Header.Get("Message-ID"))
+			fields.ListUnsubscribe = strings.TrimSpace(message.Header.Get("List-Unsubscribe"))
+			fields.Precedence = strings.TrimSpace(message.Header.Get("Precedence"))
+		}
+		result = append(result, fields)
+	}
+	sort.Slice(result, func(i, j int) bool { return result[i].UID > result[j].UID })
 	return result, nil
 }
 
