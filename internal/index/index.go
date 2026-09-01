@@ -349,7 +349,12 @@ func (s *DB) UpsertMessages(ctx context.Context, folderID int64, messages []Mess
         to_addrs=excluded.to_addrs,date_header=excluded.date_header,message_id=excluded.message_id,
         list_unsubscribe=excluded.list_unsubscribe,precedence=excluded.precedence,has_attachments=excluded.has_attachments,
 		body_preview=COALESCE(excluded.body_preview,messages.body_preview),
-		body_text=COALESCE(excluded.body_text,messages.body_text),search_bigrams=excluded.search_bigrams`
+		body_text=COALESCE(excluded.body_text,messages.body_text),
+		search_bigrams=CASE
+			WHEN excluded.body_text IS NULL AND excluded.body_preview IS NULL
+				AND (messages.body_text IS NOT NULL OR messages.body_preview IS NOT NULL)
+			THEN messages.search_bigrams
+			ELSE excluded.search_bigrams END`
 	prepared, err := tx.PrepareContext(ctx, statement)
 	if err != nil {
 		return err

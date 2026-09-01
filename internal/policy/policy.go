@@ -57,9 +57,18 @@ func New(writer imapx.Mutator, audit *index.DB) *Service {
 	return &Service{writer: writer, audit: audit}
 }
 
+// Readonly fails closed: any value that is not an explicit falsy token counts
+// as readonly. A user who set QQMAILCTL_READONLY=enabled (or misspelled a
+// truthy value) clearly wanted protection — silently disabling it would be the
+// dangerous direction.
 func Readonly() bool {
 	value := strings.TrimSpace(strings.ToLower(os.Getenv(ReadonlyEnv)))
-	return value == "1" || value == "true" || value == "yes" || value == "on"
+	switch value {
+	case "", "0", "false", "no", "off":
+		return false
+	default:
+		return true
+	}
 }
 
 func RequireMutationAllowed() error {

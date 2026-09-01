@@ -155,7 +155,10 @@ func TestConservativeCopyFlowNeverSendsBareExpunge(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, line := range <-commands {
-		if strings.Contains(strings.ToUpper(line), " EXPUNGE") {
+		upper := strings.ToUpper(line)
+		// CLOSE performs an implicit silent expunge (RFC 3501); both shapes
+		// are forbidden on every product path.
+		if strings.Contains(upper, " EXPUNGE") || strings.Contains(upper, " CLOSE") {
 			t.Fatalf("unsafe command sent: %s", line)
 		}
 	}

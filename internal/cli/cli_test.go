@@ -20,6 +20,7 @@ import (
 	"github.com/situker/qqmailctl/internal/imapx"
 	"github.com/situker/qqmailctl/internal/index"
 	"github.com/situker/qqmailctl/internal/mailmodel"
+	"github.com/situker/qqmailctl/internal/policy"
 	"github.com/situker/qqmailctl/internal/secrets"
 	projectschemas "github.com/situker/qqmailctl/schemas"
 	"github.com/spf13/cobra"
@@ -232,7 +233,11 @@ func TestReadonlyEnvironmentBlocksEveryMutatingCommandBeforeDial(t *testing.T) {
 	}
 	id := mailmodel.MsgID{Folder: "INBOX", UIDValidity: 1, UID: 1}.String()
 	planPath := filepath.Join(dir, "plan.json")
-	if err := cleanupplan.Save(planPath, cleanupplan.Plan{Schema: 1, CreatedAt: time.Now(), Items: []cleanupplan.Item{}, Statistics: cleanupplan.Statistics{ByCategory: map[string]int{}, ByFromDomain: map[string]int{}}}); err != nil {
+	// The plan is deliberately non-empty: an empty plan would be rejected by
+	// clean's own "empty plan" guard with the same PolicyDenied kind, which
+	// once let this matrix pass with the readonly gate deleted.
+	planItem := cleanupplan.Item{ID: id, Category: "marketing", Reason: "fixture", Evidence: []string{"header:List-Unsubscribe"}, From: []mailmodel.Address{{Email: "news@example.com"}}, Subject: "fixture", Date: time.Now(), SizeBytes: 1}
+	if err := cleanupplan.Save(planPath, cleanupplan.Plan{Schema: 1, CreatedAt: time.Now(), Items: []cleanupplan.Item{planItem}, Statistics: cleanupplan.Statistics{TotalCount: 1, TotalSizeBytes: 1, ByCategory: map[string]int{"marketing": 1}, ByFromDomain: map[string]int{"example.com": 1}}}); err != nil {
 		t.Fatal(err)
 	}
 	commands := [][]string{
@@ -272,6 +277,22 @@ func TestReadonlyEnvironmentBlocksEveryMutatingCommandBeforeDial(t *testing.T) {
 		if err == nil || errmap.Classify(err).Kind != errmap.PolicyDenied || dialed {
 			t.Fatalf("command %v not blocked before dial: err=%v dialed=%v", args, err, dialed)
 		}
+		// The rejection must come from the readonly gate itself — not from a
+		// sibling guard that happens to share the PolicyDenied kind.
+		if !strings.Contains(err.Error(), "QQMAILCTL_READONLY") {
+			t.Fatalf("command %v rejected by a non-readonly gate: %v", args, err)
+		}
+	}
+}
+
+func TestReadonlyUnknownValueFailsClosed(t *testing.T) {
+	t.Setenv("QQMAILCTL_READONLY", "enabled")
+	if !policy.Readonly() {
+		t.Fatal("unrecognized truthy-looking value did not fail closed")
+	}
+	t.Setenv("QQMAILCTL_READONLY", "off")
+	if policy.Readonly() {
+		t.Fatal("explicit falsy value treated as readonly")
 	}
 }
 

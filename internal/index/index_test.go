@@ -102,6 +102,37 @@ func TestSearchUsesChineseBigramsAndLeavesBodiesNullByDefault(t *testing.T) {
 	}
 }
 
+func TestPlainSyncPreservesCachedBodyBigrams(t *testing.T) {
+	ctx := context.Background()
+	store := openTestStore(t)
+	state, _, err := store.PrepareFolder(ctx, "INBOX", "/", 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := "合同条款正文内容"
+	if err := store.UpsertMessages(ctx, state.ID, []Message{{
+		ID: "mail-1", UID: 7, UIDValidity: 10, InternalDate: time.Now(),
+		Subject: "附件", FromAddr: "noreply@example.com", BodyText: &body,
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	// A later plain sync (no cached body in memory) re-upserts the same UID —
+	// e.g. the recent flag-refresh window. It must not wipe the body bigrams.
+	if err := store.UpsertMessages(ctx, state.ID, []Message{{
+		ID: "mail-1", UID: 7, UIDValidity: 10, InternalDate: time.Now(),
+		Subject: "附件", FromAddr: "noreply@example.com",
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	hits, err := store.Search(ctx, "合同条款", 20)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(hits) != 1 || hits[0].ID != "mail-1" {
+		t.Fatalf("Chinese body search lost after plain sync: %+v", hits)
+	}
+}
+
 func TestBigrams(t *testing.T) {
 	if got, want := Bigrams("中文 A"), "中文 a"; got != want {
 		t.Fatalf("Bigrams=%q, want %q", got, want)

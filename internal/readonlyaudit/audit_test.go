@@ -37,20 +37,20 @@ func TestOnlyIMAPXImportsGoIMAP(t *testing.T) {
 
 func TestGoIMAPMutationCallsAreConfinedToMutationBoundary(t *testing.T) {
 	root := filepath.Join(projectRoot(t), "internal", "imapx")
-	banned := map[string]bool{"Store": true, "Move": true, "Copy": true, "Append": true, "Expunge": true, "Create": true, "Delete": true, "Rename": true, "Subscribe": true, "Unsubscribe": true}
+	banned := map[string]bool{"Store": true, "Move": true, "Copy": true, "Append": true, "Expunge": true, "UIDExpunge": true, "UnselectAndExpunge": true, "Create": true, "Delete": true, "Rename": true, "Subscribe": true, "Unsubscribe": true}
+	// Every expunge shape is banned everywhere, including mutate.go:
+	// UnselectAndExpunge sends CLOSE, which RFC 3501 defines as an implicit
+	// silent expunge. "Never expunge" is this project's flagship promise.
+	alwaysBanned := map[string]bool{"Expunge": true, "UIDExpunge": true, "UnselectAndExpunge": true}
 	set := token.NewFileSet()
-	entries, err := os.ReadDir(root)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".go") || strings.HasSuffix(entry.Name(), "_test.go") {
-			continue
+	mutateFile := filepath.Join(root, "mutate.go")
+	err := filepath.WalkDir(root, func(path string, entry os.DirEntry, walkErr error) error {
+		if walkErr != nil || entry.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
+			return walkErr
 		}
-		filename := filepath.Join(root, entry.Name())
-		file, err := parser.ParseFile(set, filename, nil, 0)
-		if err != nil {
-			t.Fatal(err)
+		file, parseErr := parser.ParseFile(set, path, nil, 0)
+		if parseErr != nil {
+			return parseErr
 		}
 		ast.Inspect(file, func(node ast.Node) bool {
 			call, ok := node.(*ast.CallExpr)
@@ -59,12 +59,16 @@ func TestGoIMAPMutationCallsAreConfinedToMutationBoundary(t *testing.T) {
 			}
 			selector, ok := call.Fun.(*ast.SelectorExpr)
 			if ok && banned[selector.Sel.Name] {
-				if entry.Name() != "mutate.go" || selector.Sel.Name == "Expunge" {
-					t.Errorf("go-imap mutation method %s escaped the reviewed boundary in %s", selector.Sel.Name, filename)
+				if path != mutateFile || alwaysBanned[selector.Sel.Name] {
+					t.Errorf("go-imap mutation method %s escaped the reviewed boundary in %s", selector.Sel.Name, path)
 				}
 			}
 			return true
 		})
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
 }
 

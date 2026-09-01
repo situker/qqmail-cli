@@ -70,7 +70,13 @@ func newAuthLoginCommand(rt *Runtime) *cobra.Command {
 		if err != nil {
 			return err
 		}
+		// Re-login must not wipe an existing account's configuration: the send
+		// allowlist and any host overrides survive an authorization-code reset.
 		candidate := account.Account{Email: email}
+		if existing, ok := cfg.Accounts[name]; ok {
+			candidate = existing
+			candidate.Email = email
+		}
 		if err := cfg.Put(name, candidate); err != nil {
 			return err
 		}
