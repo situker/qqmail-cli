@@ -18,7 +18,7 @@ import (
 )
 
 func newTriageCommand(rt *Runtime) *cobra.Command {
-	root := &cobra.Command{Use: "triage", Short: "Classify indexed messages with deterministic local rules"}
+	root := requireSubcommand(&cobra.Command{Use: "triage", Short: "Classify indexed messages with deterministic local rules"})
 	root.AddCommand(newTriageAnalyzeCommand(rt), newTriagePlanCommand(rt))
 	return root
 }

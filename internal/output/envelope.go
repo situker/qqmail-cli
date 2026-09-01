@@ -43,11 +43,20 @@ type Envelope struct {
 }
 
 func Success(command string, data any, started time.Time) Envelope {
-	return Envelope{SchemaVersion: SchemaVersion, Command: command, OK: true, Data: data, Warnings: []Warning{}, Meta: Meta{DurationMS: time.Since(started).Milliseconds()}}
+	return Envelope{SchemaVersion: SchemaVersion, Command: command, OK: true, Data: data, Warnings: []Warning{}, Meta: Meta{DurationMS: durationMS(started)}}
 }
 
 func Failure(command string, failure Error, started time.Time) Envelope {
-	return Envelope{SchemaVersion: SchemaVersion, Command: command, OK: false, Data: nil, Error: &failure, Warnings: []Warning{}, Meta: Meta{DurationMS: time.Since(started).Milliseconds()}}
+	return Envelope{SchemaVersion: SchemaVersion, Command: command, OK: false, Data: nil, Error: &failure, Warnings: []Warning{}, Meta: Meta{DurationMS: durationMS(started)}}
+}
+
+// durationMS guards against a zero start time (a command that failed before
+// its PersistentPreRun ever ran) so meta.duration_ms cannot become garbage.
+func durationMS(started time.Time) int64 {
+	if started.IsZero() {
+		return 0
+	}
+	return time.Since(started).Milliseconds()
 }
 
 func WriteJSON(w io.Writer, value any) error {

@@ -64,6 +64,12 @@ func Classify(err error) *Error {
 		return &Error{Kind: Network, Message: "网络连接失败", Suggestion: "检查网络后重试；若刚刚频繁登录，请等待 10-15 分钟", Cause: err}
 	}
 	lower := strings.ToLower(err.Error())
+	// Cobra usage errors must be classified before the server-error substring
+	// heuristics below: `qqmailctl login` produces `unknown command "login"`,
+	// which the auth substring match would otherwise misreport as auth_failed.
+	if isUsageErrorText(lower) {
+		return &Error{Kind: Usage, Message: "命令用法错误：" + err.Error(), Suggestion: "运行 qqmailctl --help 查看命令与参数", Cause: err}
+	}
 	switch {
 	case strings.Contains(lower, "rate limit"), strings.Contains(lower, "too many"), strings.Contains(lower, "frequency"):
 		return &Error{Kind: RateLimited, Message: "QQ 邮箱暂时拒绝了频繁连接", Suggestion: "停止重试并等待 10-15 分钟", Cause: err}
@@ -74,6 +80,19 @@ func Classify(err error) *Error {
 	default:
 		return &Error{Kind: Internal, Message: "未预期的内部错误", Cause: err}
 	}
+}
+
+func isUsageErrorText(lower string) bool {
+	for _, pattern := range []string{
+		"unknown command", "unknown flag", "unknown shorthand",
+		"flag needs an argument", "invalid argument", "required flag",
+		"requires at least", "accepts at most", "arg(s), received",
+	} {
+		if strings.Contains(lower, pattern) {
+			return true
+		}
+	}
+	return false
 }
 
 func Details(err error) (output.Error, int) {

@@ -46,7 +46,7 @@ var messageIDPattern = regexp.MustCompile(`<([^<>\s]+)>`)
 
 func newSendCommand(rt *Runtime) *cobra.Command {
 	var opts composeOptions
-	cmd := &cobra.Command{Use: "send", Short: "Compose mail; dry-run unless --execute is allowlisted and confirmed"}
+	cmd := &cobra.Command{Use: "send", Short: "Compose mail; dry-run unless --execute is allowlisted and confirmed", Args: cobra.NoArgs}
 	addComposeFlags(cmd, &opts, true, true)
 	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
 		if opts.Execute {

@@ -14,7 +14,7 @@ import (
 
 func newSyncCommand(rt *Runtime) *cobra.Command {
 	var cachePreviews, cacheBodies bool
-	cmd := &cobra.Command{Use: "sync", Short: "Incrementally synchronize message metadata into the local index"}
+	cmd := &cobra.Command{Use: "sync", Short: "Incrementally synchronize message metadata into the local index", Args: cobra.NoArgs}
 	cmd.Flags().BoolVar(&cachePreviews, "cache-previews", false, "store unencrypted text previews (first 2 KiB) in the local cache")
 	cmd.Flags().BoolVar(&cacheBodies, "cache-bodies", false, "store unencrypted text bodies in the local cache")
 	cmd.RunE = func(cmd *cobra.Command, _ []string) error {

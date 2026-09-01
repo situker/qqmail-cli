@@ -23,7 +23,7 @@ func newExportCommand(rt *Runtime) *cobra.Command {
 	var all, verify bool
 	var outputDir string
 	var limit int
-	cmd := &cobra.Command{Use: "export", Short: "Export raw .eml backups without changing server state"}
+	cmd := &cobra.Command{Use: "export", Short: "Export raw .eml backups without changing server state", Args: cobra.NoArgs}
 	cmd.Flags().StringVar(&since, "since", "", "time window (24h, 7d) or YYYY-MM-DD")
 	cmd.Flags().StringSliceVar(&idValues, "ids", nil, "exact message ids")
 	cmd.Flags().BoolVar(&all, "all", false, "export the selected folder window")

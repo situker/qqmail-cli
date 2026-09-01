@@ -28,7 +28,7 @@ type watchEvent struct {
 func newWatchCommand(rt *Runtime) *cobra.Command {
 	var jsonl, once bool
 	var interval time.Duration
-	cmd := &cobra.Command{Use: "watch", Short: "Poll for new UIDs and emit one NDJSON event per change"}
+	cmd := &cobra.Command{Use: "watch", Short: "Poll for new UIDs and emit one NDJSON event per change", Args: cobra.NoArgs}
 	cmd.Flags().BoolVar(&jsonl, "jsonl", false, "required: emit newline-delimited JSON events")
 	cmd.Flags().DurationVar(&interval, "interval", 60*time.Second, "poll interval (minimum 5s)")
 	cmd.Flags().BoolVar(&once, "once", false, "poll once and exit (for automation and tests)")

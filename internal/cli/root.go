@@ -54,10 +54,14 @@ type Runtime struct {
 
 func Execute(build BuildInfo) int {
 	rt := &Runtime{Build: build, Folder: "INBOX", Timeout: 120 * time.Second, Out: os.Stdout, Err: os.Stderr, In: os.Stdin}
+	rt.started = time.Now()
 	root := NewRoot(rt)
 	if err := root.Execute(); err != nil {
 		failure, code := errmap.Details(err)
-		if rt.JSON {
+		// An unknown root command fails before flag parsing, so rt.JSON never
+		// gets set; honor a --json on the raw argument list to keep stdout a
+		// valid JSON document on every error path.
+		if rt.JSON || argsRequestJSON(os.Args[1:]) {
 			command := rt.current
 			if command == "" {
 				command = "root"
@@ -72,6 +76,21 @@ func Execute(build BuildInfo) int {
 		return code
 	}
 	return rt.resultCode
+}
+
+// argsRequestJSON detects --json on the raw argument list. A literal "--json"
+// value passed to another flag could false-positive here; that only affects
+// the formatting of an already-failing invocation.
+func argsRequestJSON(args []string) bool {
+	for _, arg := range args {
+		if arg == "--" {
+			return false
+		}
+		if arg == "--json" || arg == "--json=true" {
+			return true
+		}
+	}
+	return false
 }
 
 func NewRoot(rt *Runtime) *cobra.Command {
@@ -127,6 +146,9 @@ func NewRoot(rt *Runtime) *cobra.Command {
 	}
 	root.SetOut(rt.Out)
 	root.SetErr(rt.Err)
+	root.SetFlagErrorFunc(func(_ *cobra.Command, err error) error {
+		return &errmap.Error{Kind: errmap.Usage, Message: "参数用法错误：" + err.Error(), Suggestion: "运行 qqmailctl --help 查看命令与参数"}
+	})
 	root.PersistentFlags().BoolVar(&rt.JSON, "json", false, "write one machine-readable JSON document")
 	root.PersistentFlags().StringVar(&rt.Account, "account", "", "account name (defaults to configured default)")
 	root.PersistentFlags().StringVar(&rt.Folder, "folder", "INBOX", "mail folder")
@@ -146,6 +168,20 @@ func NewRoot(rt *Runtime) *cobra.Command {
 		newSendCommand(rt), newReplyCommand(rt), newForwardCommand(rt),
 	)
 	return root
+}
+
+// requireSubcommand turns a bare parent invocation or an unknown subcommand
+// into a structured usage error. Without it cobra prints the parent's help to
+// stdout and exits 0 — which in --json mode is both a stdout-purity violation
+// and a false success.
+func requireSubcommand(cmd *cobra.Command) *cobra.Command {
+	cmd.RunE = func(c *cobra.Command, args []string) error {
+		if len(args) > 0 {
+			return &errmap.Error{Kind: errmap.Usage, Message: fmt.Sprintf("未知子命令 %q", args[0]), Suggestion: fmt.Sprintf("运行 qqmailctl %s --help 查看可用子命令", c.Name())}
+		}
+		return &errmap.Error{Kind: errmap.Usage, Message: "缺少子命令", Suggestion: fmt.Sprintf("运行 qqmailctl %s --help 查看可用子命令", c.Name())}
+	}
+	return cmd
 }
 
 func commandName(cmd *cobra.Command) string {

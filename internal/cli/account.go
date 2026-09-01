@@ -10,13 +10,13 @@ import (
 )
 
 func newAccountCommand(rt *Runtime) *cobra.Command {
-	cmd := &cobra.Command{Use: "account", Short: "Manage configured accounts"}
+	cmd := requireSubcommand(&cobra.Command{Use: "account", Short: "Manage configured accounts"})
 	cmd.AddCommand(newAccountListCommand(rt), newAccountUseCommand(rt))
 	return cmd
 }
 
 func newAccountListCommand(rt *Runtime) *cobra.Command {
-	cmd := &cobra.Command{Use: "list", Short: "List configured accounts"}
+	cmd := &cobra.Command{Use: "list", Short: "List configured accounts", Args: cobra.NoArgs}
 	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
 		cfg, _, err := account.Load(rt.ConfigPath)
 		if err != nil {

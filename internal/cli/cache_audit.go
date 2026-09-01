@@ -12,8 +12,8 @@ import (
 )
 
 func newCacheCommand(rt *Runtime) *cobra.Command {
-	root := &cobra.Command{Use: "cache", Short: "Inspect or completely remove the local index"}
-	inspect := &cobra.Command{Use: "inspect", Short: "Inspect cache size and privacy-sensitive row counts"}
+	root := requireSubcommand(&cobra.Command{Use: "cache", Short: "Inspect or completely remove the local index"})
+	inspect := &cobra.Command{Use: "inspect", Short: "Inspect cache size and privacy-sensitive row counts", Args: cobra.NoArgs}
 	inspect.RunE = func(cmd *cobra.Command, _ []string) error {
 		_, _, named, err := rt.loadAccount()
 		if err != nil {
@@ -29,7 +29,7 @@ func newCacheCommand(rt *Runtime) *cobra.Command {
 		})
 	}
 	var execute bool
-	clear := &cobra.Command{Use: "clear", Short: "Delete the database, WAL, and SHM while retaining the audit JSONL"}
+	clear := &cobra.Command{Use: "clear", Short: "Delete the database, WAL, and SHM while retaining the audit JSONL", Args: cobra.NoArgs}
 	clear.Flags().BoolVar(&execute, "execute", false, "perform deletion after TTY confirmation")
 	clear.RunE = func(cmd *cobra.Command, _ []string) error {
 		_, _, named, err := rt.loadAccount()
@@ -71,9 +71,9 @@ func newCacheCommand(rt *Runtime) *cobra.Command {
 }
 
 func newAuditCommand(rt *Runtime) *cobra.Command {
-	root := &cobra.Command{Use: "audit", Short: "Read local mutation audit records"}
+	root := requireSubcommand(&cobra.Command{Use: "audit", Short: "Read local mutation audit records"})
 	var limit int
-	list := &cobra.Command{Use: "list", Short: "List newest audit records"}
+	list := &cobra.Command{Use: "list", Short: "List newest audit records", Args: cobra.NoArgs}
 	list.Flags().IntVar(&limit, "limit", 100, "maximum records (1-1000)")
 	list.RunE = func(cmd *cobra.Command, _ []string) error {
 		if limit < 1 || limit > 1000 {

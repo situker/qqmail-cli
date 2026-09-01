@@ -18,7 +18,7 @@ type versionData struct {
 }
 
 func newVersionCommand(rt *Runtime) *cobra.Command {
-	cmd := &cobra.Command{Use: "version", Short: "Show build version"}
+	cmd := &cobra.Command{Use: "version", Short: "Show build version", Args: cobra.NoArgs}
 	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
 		data := versionData{Version: rt.Build.Version, Commit: rt.Build.Commit, BuildDate: rt.Build.Date, GoVersion: runtime.Version(), OS: runtime.GOOS, Arch: runtime.GOARCH}
 		return writeResult(rt, cmd, data, func(w io.Writer) error {

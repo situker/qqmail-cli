@@ -17,7 +17,7 @@ import (
 
 func newBackupCommand(rt *Runtime) *cobra.Command {
 	var planPath, outputDir string
-	cmd := &cobra.Command{Use: "backup", Short: "Export every message selected by a cleanup plan"}
+	cmd := &cobra.Command{Use: "backup", Short: "Export every message selected by a cleanup plan", Args: cobra.NoArgs}
 	cmd.Flags().StringVar(&planPath, "plan", "", "required schema-valid plan.json")
 	cmd.Flags().StringVar(&outputDir, "output", "", "required backup directory")
 	_ = cmd.MarkFlagRequired("plan")

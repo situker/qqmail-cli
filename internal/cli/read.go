@@ -21,8 +21,8 @@ import (
 )
 
 func newFolderCommand(rt *Runtime) *cobra.Command {
-	root := &cobra.Command{Use: "folder", Short: "Read mail folders"}
-	cmd := &cobra.Command{Use: "list", Short: "List folders without changing them"}
+	root := requireSubcommand(&cobra.Command{Use: "folder", Short: "Read mail folders"})
+	cmd := &cobra.Command{Use: "list", Short: "List folders without changing them", Args: cobra.NoArgs}
 	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
 		ctx, cancel := rt.context()
 		defer cancel()
@@ -59,9 +59,9 @@ type envelopeOptions struct {
 }
 
 func newEnvelopeCommand(rt *Runtime) *cobra.Command {
-	root := &cobra.Command{Use: "envelope", Short: "Read lightweight message envelopes"}
+	root := requireSubcommand(&cobra.Command{Use: "envelope", Short: "Read lightweight message envelopes"})
 	var opts envelopeOptions
-	cmd := &cobra.Command{Use: "list", Short: "List message envelopes using UID pagination"}
+	cmd := &cobra.Command{Use: "list", Short: "List message envelopes using UID pagination", Args: cobra.NoArgs}
 	cmd.Flags().BoolVar(&opts.Unread, "unread", false, "only unread messages")
 	cmd.Flags().StringVar(&opts.From, "from", "", "case-insensitive sender substring")
 	cmd.Flags().StringVar(&opts.Subject, "subject", "", "case-insensitive subject substring")
@@ -163,7 +163,7 @@ func containsNonASCII(value string) bool {
 }
 
 func newMessageCommand(rt *Runtime) *cobra.Command {
-	root := &cobra.Command{Use: "message", Short: "Read full messages"}
+	root := requireSubcommand(&cobra.Command{Use: "message", Short: "Read full messages"})
 	root.AddCommand(newMessageShowCommand(rt), newMessageMarkReadCommand(rt), newMessageMoveCommand(rt))
 	return root
 }
@@ -261,7 +261,7 @@ func newMessageShowCommand(rt *Runtime) *cobra.Command {
 }
 
 func newAttachmentCommand(rt *Runtime) *cobra.Command {
-	root := &cobra.Command{Use: "attachment", Short: "Inspect and explicitly download attachments"}
+	root := requireSubcommand(&cobra.Command{Use: "attachment", Short: "Inspect and explicitly download attachments"})
 	root.AddCommand(newAttachmentListCommand(rt), newAttachmentDownloadCommand(rt))
 	return root
 }

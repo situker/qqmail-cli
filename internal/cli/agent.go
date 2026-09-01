@@ -19,7 +19,7 @@ type agentCommand struct {
 }
 
 func newAgentInfoCommand(rt *Runtime) *cobra.Command {
-	cmd := &cobra.Command{Use: "agent-info", Short: "Emit the machine-readable capability contract"}
+	cmd := &cobra.Command{Use: "agent-info", Short: "Emit the machine-readable capability contract", Args: cobra.NoArgs}
 	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
 		configured := false
 		accountInfo := map[string]any{"name": "", "configured": false}

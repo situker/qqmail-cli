@@ -21,7 +21,7 @@ type doctorCheck struct {
 }
 
 func newDoctorCommand(rt *Runtime) *cobra.Command {
-	cmd := &cobra.Command{Use: "doctor", Short: "Diagnose configuration, credentials, TLS, login, and IMAP capabilities"}
+	cmd := &cobra.Command{Use: "doctor", Short: "Diagnose configuration, credentials, TLS, login, and IMAP capabilities", Args: cobra.NoArgs}
 	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
 		checks := []doctorCheck{}
 		start := time.Now()

@@ -20,7 +20,7 @@ import (
 var authCodePattern = regexp.MustCompile(`^[A-Za-z0-9]{16}$`)
 
 func newAuthCommand(rt *Runtime) *cobra.Command {
-	auth := &cobra.Command{Use: "auth", Short: "Manage QQ Mail authorization"}
+	auth := requireSubcommand(&cobra.Command{Use: "auth", Short: "Manage QQ Mail authorization"})
 	auth.AddCommand(newAuthLoginCommand(rt), newAuthStatusCommand(rt), newAuthLogoutCommand(rt))
 	return auth
 }
@@ -28,7 +28,7 @@ func newAuthCommand(rt *Runtime) *cobra.Command {
 func newAuthLoginCommand(rt *Runtime) *cobra.Command {
 	var email, name string
 	var fromStdin bool
-	cmd := &cobra.Command{Use: "login", Short: "Validate and securely store an authorization code"}
+	cmd := &cobra.Command{Use: "login", Short: "Validate and securely store an authorization code", Args: cobra.NoArgs}
 	cmd.Flags().StringVar(&email, "email", "", "QQ Mail address")
 	cmd.Flags().StringVar(&name, "name", "personal", "local account name")
 	cmd.Flags().BoolVar(&fromStdin, "auth-code-stdin", false, "read the authorization code from standard input")
@@ -131,7 +131,7 @@ func readAuthCode(rt *Runtime, fromStdin bool) (string, error) {
 }
 
 func newAuthStatusCommand(rt *Runtime) *cobra.Command {
-	cmd := &cobra.Command{Use: "status", Short: "Show local authorization status"}
+	cmd := &cobra.Command{Use: "status", Short: "Show local authorization status", Args: cobra.NoArgs}
 	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
 		_, path, named, err := rt.loadAccount()
 		if err != nil {
@@ -154,7 +154,7 @@ func newAuthStatusCommand(rt *Runtime) *cobra.Command {
 
 func newAuthLogoutCommand(rt *Runtime) *cobra.Command {
 	var name string
-	cmd := &cobra.Command{Use: "logout", Short: "Delete a locally stored credential and account reference"}
+	cmd := &cobra.Command{Use: "logout", Short: "Delete a locally stored credential and account reference", Args: cobra.NoArgs}
 	cmd.Flags().StringVar(&name, "name", "", "account name")
 	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
 		if err := policy.RequireMutationAllowed(); err != nil {
