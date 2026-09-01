@@ -55,7 +55,7 @@ func TestCommandTreeMatchesDeclaredRiskCatalog(t *testing.T) {
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("command surface changed; review risk catalog\ngot:  %v\nwant: %v", got, want)
 	}
-	for _, path := range []string{"clean", "message mark-read", "message move", "send", "reply", "forward"} {
+	for _, path := range []string{"clean", "restore", "message mark-read", "message move", "send", "reply", "forward"} {
 		command, _, err := root.Find(strings.Fields(path))
 		if err != nil {
 			t.Fatal(err)
@@ -252,6 +252,7 @@ func TestReadonlyEnvironmentBlocksEveryMutatingCommandBeforeDial(t *testing.T) {
 		{"--config", configPath, "message", "mark-read", id, "--execute"},
 		{"--config", configPath, "message", "move", id, "Trash", "--execute"},
 		{"--config", configPath, "clean", "--plan", planPath, "--execute"},
+		{"--config", configPath, "restore", "--plan", planPath, "--execute"},
 		{"--config", configPath, "cache", "clear", "--execute"},
 		{"--config", configPath, "send", "--to", "reader@example.com", "--subject", "fixture", "--execute"},
 		{"--config", configPath, "reply", id, "--execute"},

@@ -163,7 +163,7 @@ func NewRoot(rt *Runtime) *cobra.Command {
 		newExportCommand(rt), newDoctorCommand(rt), newAgentInfoCommand(rt), newSchemaCommand(rt),
 		newSyncCommand(rt), newLocalSearchCommand(rt),
 		newTriageCommand(rt), newBackupCommand(rt),
-		newCleanCommand(rt),
+		newCleanCommand(rt), newRestoreCommand(rt),
 		newCacheCommand(rt), newAuditCommand(rt), newWatchCommand(rt),
 		newSendCommand(rt), newReplyCommand(rt), newForwardCommand(rt),
 	)

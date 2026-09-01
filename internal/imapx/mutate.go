@@ -12,11 +12,15 @@ import (
 
 // Mutator extends the read surface with the only server mutations allowed by
 // qqmailctl. Command code must reach these methods through internal/policy.
+// LocateByIdentity is itself read-only (EXAMINE + UID SEARCH + PEEK fetches);
+// it lives here because its only consumers are mutation flows (restore, and
+// the conservative copy confirmation).
 type Mutator interface {
 	Reader
 	SetSeen(context.Context, mailmodel.MsgID) error
 	MoveUID(context.Context, mailmodel.MsgID, string) (MutationResult, error)
 	CopyMarkDeletedUID(context.Context, mailmodel.MsgID, string, MessageIdentity) (MutationResult, error)
+	LocateByIdentity(context.Context, string, MessageIdentity) ([]mailmodel.MsgID, error)
 }
 
 type MessageIdentity struct {
@@ -128,49 +132,61 @@ func (c *Client) selectWritable(ctx context.Context, id mailmodel.MsgID) error {
 }
 
 func (c *Client) confirmDestination(ctx context.Context, destination string, identity MessageIdentity) (bool, error) {
-	if strings.TrimSpace(identity.MessageID) == "" || identity.SizeBytes < 0 {
-		return false, nil
-	}
-	uidValidity, _, err := c.Examine(ctx, destination)
+	matches, err := c.LocateByIdentity(ctx, destination, identity)
 	if err != nil {
 		return false, err
 	}
+	return len(matches) > 0, nil
+}
+
+// LocateByIdentity finds messages in a folder by Message-ID plus RFC822.SIZE.
+// It is read-only and powers both the conservative-copy confirmation and the
+// restore command's trash lookup.
+func (c *Client) LocateByIdentity(ctx context.Context, folder string, identity MessageIdentity) ([]mailmodel.MsgID, error) {
+	if strings.TrimSpace(identity.MessageID) == "" || identity.SizeBytes < 0 {
+		return []mailmodel.MsgID{}, nil
+	}
+	uidValidity, _, err := c.Examine(ctx, folder)
+	if err != nil {
+		return nil, err
+	}
 	if err := c.setDeadline(ctx); err != nil {
-		return false, err
+		return nil, err
 	}
 	stop := c.watchdog(ctx)
 	criteria := &imap.SearchCriteria{Header: []imap.SearchCriteriaHeaderField{{Key: "Message-ID", Value: identity.MessageID}}}
 	data, err := c.raw.UIDSearch(criteria, nil).Wait()
 	stop()
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 	all := data.AllUIDs()
 	if len(all) == 0 {
-		return false, nil
+		return []mailmodel.MsgID{}, nil
 	}
 	ids := make([]uint32, len(all))
 	for i, uid := range all {
 		ids[i] = uint32(uid)
 	}
-	envelopes, err := c.FetchEnvelopes(ctx, destination, uidValidity, ids)
+	envelopes, err := c.FetchEnvelopes(ctx, folder, uidValidity, ids)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 	headers, err := c.FetchHeaderFields(ctx, ids)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 	headerByUID := map[uint32]string{}
 	for _, header := range headers {
 		headerByUID[header.UID] = normalizeMessageID(header.MessageID)
 	}
+	matches := []mailmodel.MsgID{}
 	for _, envelope := range envelopes {
 		if envelope.Size == identity.SizeBytes && headerByUID[envelope.UID] == normalizeMessageID(identity.MessageID) {
-			return true, nil
+			matches = append(matches, mailmodel.MsgID{Folder: folder, UIDValidity: uidValidity, UID: envelope.UID})
 		}
 	}
-	return false, nil
+	return matches, nil
 }
 
 func hasCapability(values []string, want string) bool {

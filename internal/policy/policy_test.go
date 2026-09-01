@@ -44,6 +44,9 @@ func (f *fakeMutator) CopyMarkDeletedUID(context.Context, mailmodel.MsgID, strin
 	f.copyCalls++
 	return imapx.MutationResult{Method: "copy_store_deleted", SourceRetained: true}, nil
 }
+func (f *fakeMutator) LocateByIdentity(context.Context, string, imapx.MessageIdentity) ([]mailmodel.MsgID, error) {
+	return []mailmodel.MsgID{}, nil
+}
 
 func TestReadonlyBlocksBeforeWriter(t *testing.T) {
 	t.Setenv(ReadonlyEnv, "1")
@@ -63,6 +66,30 @@ func TestFallbackUsesConservativeCopyAndAudits(t *testing.T) {
 	result, err := service.Move(context.Background(), mailmodel.MsgID{Folder: "INBOX", UIDValidity: 1, UID: 1}, "Trash", imapx.MessageIdentity{}, "clean", "plan.json")
 	if err != nil || writer.copyCalls != 1 || writer.moveCalls != 0 || !result.SourceRetained {
 		t.Fatalf("fallback result=%+v writer=%+v err=%v", result, writer, err)
+	}
+	entries, err := store.AuditList(context.Background(), 10)
+	if err != nil || len(entries) != 2 {
+		t.Fatalf("audit entries=%+v err=%v", entries, err)
+	}
+}
+
+func TestMoveUsesNativeMoveWhenAdvertised(t *testing.T) {
+	t.Setenv(ReadonlyEnv, "0")
+	writer := &fakeMutator{caps: []string{"MOVE", "UIDPLUS"}}
+	service := New(writer, openAuditStore(t))
+	result, err := service.Move(context.Background(), mailmodel.MsgID{Folder: "INBOX", UIDValidity: 1, UID: 1}, "Trash", imapx.MessageIdentity{}, "clean", "plan.json")
+	if err != nil || writer.moveCalls != 1 || writer.copyCalls != 0 || result.Method != "uid_move" {
+		t.Fatalf("native MOVE path not taken: result=%+v writer=%+v err=%v", result, writer, err)
+	}
+}
+
+func TestMarkReadPositivePathAudits(t *testing.T) {
+	t.Setenv(ReadonlyEnv, "0")
+	writer := &fakeMutator{}
+	store := openAuditStore(t)
+	service := New(writer, store)
+	if err := service.MarkRead(context.Background(), mailmodel.MsgID{Folder: "INBOX", UIDValidity: 1, UID: 1}, "message.mark-read", ""); err != nil || writer.seenCalls != 1 {
+		t.Fatalf("mark-read positive path: calls=%d err=%v", writer.seenCalls, err)
 	}
 	entries, err := store.AuditList(context.Background(), 10)
 	if err != nil || len(entries) != 2 {
