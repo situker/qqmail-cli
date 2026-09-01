@@ -71,7 +71,7 @@ func NewRoot(rt *Runtime) *cobra.Command {
 	}
 	if rt.Dial == nil {
 		rt.Dial = func(ctx context.Context, cfg account.Named, authCode string) (imapx.Reader, error) {
-			return imapx.Dial(ctx, cfg, authCode)
+			return imapx.DialWithVersion(ctx, cfg, authCode, rt.Build.Version)
 		}
 	}
 	root := &cobra.Command{

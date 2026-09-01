@@ -115,14 +115,19 @@ func listEnvelopes(ctx context.Context, reader imapx.Reader, folder string, filt
 	if err != nil {
 		return nil, "server", err
 	}
-	ids, err := reader.Search(ctx, filter)
 	mode := "server"
-	if err != nil && (filter.From != "" || filter.Subject != "") {
+	searchFilter := filter
+	if containsNonASCII(filter.From) || containsNonASCII(filter.Subject) {
 		mode = "client_window"
-		clientFilter := filter
-		clientFilter.From = ""
-		clientFilter.Subject = ""
-		ids, err = reader.Search(ctx, clientFilter)
+		searchFilter.From = ""
+		searchFilter.Subject = ""
+	}
+	ids, err := reader.Search(ctx, searchFilter)
+	if err != nil && mode == "server" && (filter.From != "" || filter.Subject != "") {
+		mode = "client_window"
+		searchFilter.From = ""
+		searchFilter.Subject = ""
+		ids, err = reader.Search(ctx, searchFilter)
 	}
 	if err != nil {
 		return nil, mode, err
@@ -145,6 +150,15 @@ func listEnvelopes(ctx context.Context, reader imapx.Reader, folder string, filt
 		}
 	}
 	return result, mode, nil
+}
+
+func containsNonASCII(value string) bool {
+	for _, r := range value {
+		if r > 127 {
+			return true
+		}
+	}
+	return false
 }
 
 func newMessageCommand(rt *Runtime) *cobra.Command {

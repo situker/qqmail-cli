@@ -27,10 +27,11 @@ This repository implements the v0.1 read-only product surface from `TECHNICAL_PL
 - `goreleaser check` and `goreleaser build --snapshot --clean` — six targets passed
 - Skill Creator `quick_validate.py` — `Skill is valid!`
 - Owner-operated live QQ Mail smoke on Windows (2026-09-01) — authorization verified and saved, unread envelope listing and message reading succeeded, and both a second CLI query and the QQ web UI confirmed that `message show` preserved the unread state. The redacted observation is in `docs/compat/qq-20260901.md`.
+- Read-only S1/S2/S3/S5/S6/S7/S10 observations (2026-09-01) — capability/authentication/search/UIDVALIDITY/short-IDLE/visibility-baseline/STARTTLS evidence is recorded in `docs/compat/qq-20260901-readonly-spikes.md`. All raw mailbox counts and hashes remain in Git-ignored local output.
 
 ## Externally blocked / deliberately not performed
 
-- The complete M8 release-blocking S1/S2/S3/S7/S4 probe suite still requires a dedicated QQ Mail test account and controlled runs. The owner-operated live smoke above confirms the core read-only path but did not capture the capability/search/error/rate-limit evidence required to close those spikes.
+- S4, the S5 write phase, the second S7 web-option snapshot, S8, S9 and S11 remain gated/manual. The read-only observations above do not replace dedicated-account write/rate-limit evidence.
 - macOS Keychain and a headless Linux Secret Service failure path still need platform CI/real-host confirmation.
 - Remote GitHub repository creation, first commit, push, tag, npm/PyPI/crates reservation and v0.1.0 publication require the owner's accounts/authorization and were not attempted.
-- The QQ malformed UID FETCH variant remains a pending dialect fixture until an exact redacted response shape is captured by S1; the implemented timeout guard prevents indefinite blocking in the meantime.
+- The sampled metadata-only QQ UID FETCH response was well formed; the historical malformed full-FETCH variant remains a pending fixture until an exact redacted shape is captured. The implemented timeout guard prevents indefinite blocking.

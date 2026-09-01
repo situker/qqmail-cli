@@ -57,10 +57,18 @@ type Client struct {
 }
 
 func Dial(ctx context.Context, cfg account.Named, authCode string) (*Client, error) {
-	return dial(ctx, cfg, authCode, nil, DefaultCommandTimeout)
+	return dialWithVersion(ctx, cfg, authCode, nil, DefaultCommandTimeout, "dev")
 }
 
 func dial(ctx context.Context, cfg account.Named, authCode string, tlsOverride *tls.Config, commandTimeout time.Duration) (*Client, error) {
+	return dialWithVersion(ctx, cfg, authCode, tlsOverride, commandTimeout, "dev")
+}
+
+func DialWithVersion(ctx context.Context, cfg account.Named, authCode, version string) (*Client, error) {
+	return dialWithVersion(ctx, cfg, authCode, nil, DefaultCommandTimeout, version)
+}
+
+func dialWithVersion(ctx context.Context, cfg account.Named, authCode string, tlsOverride *tls.Config, commandTimeout time.Duration, version string) (*Client, error) {
 	dialer := &net.Dialer{Timeout: DefaultDialTimeout}
 	plain, err := dialer.DialContext(ctx, "tcp", net.JoinHostPort(cfg.IMAPHost, fmt.Sprint(cfg.IMAPPort)))
 	if err != nil {
@@ -126,6 +134,19 @@ func dial(ctx context.Context, cfg account.Named, authCode string, tlsOverride *
 		return nil, err
 	}
 	client.capAfter = capStrings(after)
+	if after.Has(imap.CapID) {
+		if err := client.setDeadline(ctx); err != nil {
+			client.close()
+			return nil, err
+		}
+		stopID := client.watchdog(ctx)
+		_, err := client.raw.ID(&imap.IDData{Name: "qqmailctl", Version: version}).Wait()
+		stopID()
+		if err != nil {
+			client.close()
+			return nil, fmt.Errorf("IMAP ID failed: %w", err)
+		}
+	}
 	return client, nil
 }
 

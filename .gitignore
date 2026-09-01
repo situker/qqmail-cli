@@ -1,9 +1,9 @@
 /bin/
 /dist/
 /coverage.out
+/spikes/results/
 /*.exe
 *.test
 *.prof
 .idea/
 .vscode/
-
