@@ -1,6 +1,7 @@
 package index
 
 import (
+	"bufio"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -88,6 +89,7 @@ type Inspection struct {
 	Messages       int    `json:"messages"`
 	PreviewRows    int    `json:"preview_rows"`
 	BodyRows       int    `json:"body_rows"`
+	AuditRows      int    `json:"audit_rows"`
 	Unencrypted    bool   `json:"unencrypted"`
 	PrivacyWarning string `json:"privacy_warning"`
 }
@@ -265,6 +267,24 @@ func (s *DB) Close() error {
 }
 
 func (s *DB) Path() string { return s.path }
+
+func (s *DB) FolderState(ctx context.Context, name string) (FolderState, bool, error) {
+	var state FolderState
+	var lastSync string
+	err := s.db.QueryRowContext(ctx, `SELECT f.id,f.name,f.delimiter,f.uidvalidity,f.uidnext,f.last_sync_at,
+        COALESCE(s.last_seen_uid,0) FROM folders f LEFT JOIN sync_state s ON s.folder_id=f.id WHERE f.name=?`, name).
+		Scan(&state.ID, &state.Name, &state.Delimiter, &state.UIDValidity, &state.UIDNext, &lastSync, &state.LastSeenUID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return FolderState{}, false, nil
+	}
+	if err != nil {
+		return FolderState{}, false, err
+	}
+	if lastSync != "" {
+		state.LastSyncAt, _ = time.Parse(time.RFC3339Nano, lastSync)
+	}
+	return state, true, nil
+}
 
 func (s *DB) PrepareFolder(ctx context.Context, name, delimiter string, uidValidity uint32) (FolderState, bool, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
@@ -445,6 +465,14 @@ func (s *DB) AddAudit(ctx context.Context, entry AuditEntry) (AuditEntry, error)
 	return entry, nil
 }
 
+func (s *DB) RecordAudit(ctx context.Context, entry AuditEntry) (AuditEntry, error) {
+	entry, err := s.AddAudit(ctx, entry)
+	if err != nil {
+		return entry, err
+	}
+	return entry, appendAuditFile(s.path+".audit.jsonl", entry)
+}
+
 func (s *DB) AuditList(ctx context.Context, limit int) ([]AuditEntry, error) {
 	if limit < 1 || limit > 1000 {
 		return nil, fmt.Errorf("audit limit must be 1 through 1000")
@@ -472,18 +500,37 @@ func (s *DB) Inspect(ctx context.Context) (Inspection, error) {
 	if err != nil {
 		return Inspection{}, err
 	}
-	inspection := Inspection{Path: s.path, Exists: true, SizeBytes: info.Size(), SchemaVersion: SchemaVersion, Unencrypted: true, PrivacyWarning: "cache is not encrypted; cache clear deletes the database, WAL, and SHM files"}
+	inspection := Inspection{Path: s.path, Exists: true, SizeBytes: info.Size(), SchemaVersion: SchemaVersion, Unencrypted: true, PrivacyWarning: "cache is not encrypted; cache clear deletes the database, WAL, and SHM; the content-free mutation audit JSONL is retained"}
 	for query, target := range map[string]*int{
 		"SELECT COUNT(*) FROM folders":                                 &inspection.Folders,
 		"SELECT COUNT(*) FROM messages":                                &inspection.Messages,
 		"SELECT COUNT(*) FROM messages WHERE body_preview IS NOT NULL": &inspection.PreviewRows,
 		"SELECT COUNT(*) FROM messages WHERE body_text IS NOT NULL":    &inspection.BodyRows,
+		"SELECT COUNT(*) FROM audit":                                   &inspection.AuditRows,
 	} {
 		if err := s.db.QueryRowContext(ctx, query).Scan(target); err != nil {
 			return Inspection{}, err
 		}
 	}
 	return inspection, nil
+}
+
+func InspectAccount(accountName string) (Inspection, error) {
+	path, err := CachePath(accountName)
+	if err != nil {
+		return Inspection{}, err
+	}
+	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
+		return Inspection{Path: path, Exists: false, Unencrypted: true, PrivacyWarning: "cache is not encrypted; cache clear deletes the database, WAL, and SHM; the content-free mutation audit JSONL is retained"}, nil
+	} else if err != nil {
+		return Inspection{}, err
+	}
+	store, err := OpenPath(path, false)
+	if err != nil {
+		return Inspection{}, err
+	}
+	defer func() { _ = store.Close() }()
+	return store.Inspect(context.Background())
 }
 
 func Clear(accountName string) ([]string, error) {
@@ -505,6 +552,78 @@ func Clear(accountName string) ([]string, error) {
 		}
 	}
 	return removed, nil
+}
+
+func AppendStandaloneAudit(accountName string, entry AuditEntry) error {
+	path, err := CachePath(accountName)
+	if err != nil {
+		return err
+	}
+	if entry.TS.IsZero() {
+		entry.TS = time.Now().UTC()
+	}
+	return appendAuditFile(path+".audit.jsonl", entry)
+}
+
+func ReadAuditJSONL(accountName string, limit int) ([]AuditEntry, error) {
+	if limit < 1 || limit > 1000 {
+		return nil, fmt.Errorf("audit limit must be 1 through 1000")
+	}
+	path, err := CachePath(accountName)
+	if err != nil {
+		return nil, err
+	}
+	file, err := os.Open(path + ".audit.jsonl")
+	if errors.Is(err, os.ErrNotExist) {
+		return []AuditEntry{}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = file.Close() }()
+	entries := []AuditEntry{}
+	scanner := bufio.NewScanner(file)
+	scanner.Buffer(make([]byte, 4096), 1<<20)
+	for scanner.Scan() {
+		var entry AuditEntry
+		if err := json.Unmarshal(scanner.Bytes(), &entry); err != nil {
+			return nil, fmt.Errorf("audit JSONL is invalid: %w", err)
+		}
+		entries = append(entries, entry)
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+	if len(entries) > limit {
+		entries = entries[len(entries)-limit:]
+	}
+	for left, right := 0, len(entries)-1; left < right; left, right = left+1, right-1 {
+		entries[left], entries[right] = entries[right], entries[left]
+	}
+	return entries, nil
+}
+
+func appendAuditFile(path string, entry AuditEntry) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return err
+	}
+	raw, err := json.Marshal(entry)
+	if err != nil {
+		return err
+	}
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o600)
+	if err != nil {
+		return err
+	}
+	if _, err := file.Write(append(raw, '\n')); err != nil {
+		_ = file.Close()
+		return err
+	}
+	if err := file.Sync(); err != nil {
+		_ = file.Close()
+		return err
+	}
+	return file.Close()
 }
 
 func Bigrams(value string) string {

@@ -15,6 +15,7 @@ import (
 	"github.com/situker/qqmailctl/internal/mailmodel"
 	"github.com/situker/qqmailctl/internal/mimeparse"
 	"github.com/situker/qqmailctl/internal/output"
+	"github.com/situker/qqmailctl/internal/policy"
 	"github.com/situker/qqmailctl/internal/safeio"
 	"github.com/spf13/cobra"
 )
@@ -163,7 +164,7 @@ func containsNonASCII(value string) bool {
 
 func newMessageCommand(rt *Runtime) *cobra.Command {
 	root := &cobra.Command{Use: "message", Short: "Read full messages"}
-	root.AddCommand(newMessageShowCommand(rt))
+	root.AddCommand(newMessageShowCommand(rt), newMessageMarkReadCommand(rt), newMessageMoveCommand(rt))
 	return root
 }
 
@@ -304,6 +305,9 @@ func newAttachmentDownloadCommand(rt *Runtime) *cobra.Command {
 	cmd.Flags().Int64Var(&maxSize, "max-size", 0, "maximum attachment bytes (0 means no extra limit)")
 	_ = cmd.MarkFlagRequired("output")
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		if err := policy.RequireMutationAllowed(); err != nil {
+			return err
+		}
 		id, err := mailmodel.ParseMsgID(args[0])
 		if err != nil {
 			return err

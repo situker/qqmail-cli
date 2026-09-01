@@ -179,6 +179,20 @@ func Verify(outputDir string, named account.Named, keyring secrets.Provider) (Re
 	return result, nil
 }
 
+// LoadVerified returns a manifest only after its HMAC and every referenced
+// local file hash have been verified.
+func LoadVerified(outputDir string, named account.Named, keyring secrets.Provider) (Manifest, string, error) {
+	result, err := Verify(outputDir, named, keyring)
+	if err != nil {
+		return Manifest{}, "", err
+	}
+	manifest, err := loadManifest(result.ManifestPath)
+	if err != nil {
+		return Manifest{}, "", err
+	}
+	return manifest, filepath.Dir(result.ManifestPath), nil
+}
+
 func getOrCreateKey(provider secrets.Provider, email string) ([]byte, error) {
 	key, err := getKey(provider, email)
 	if err == nil {

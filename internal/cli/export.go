@@ -13,6 +13,7 @@ import (
 	"github.com/situker/qqmailctl/internal/imapx"
 	"github.com/situker/qqmailctl/internal/mailmodel"
 	"github.com/situker/qqmailctl/internal/output"
+	"github.com/situker/qqmailctl/internal/policy"
 	"github.com/spf13/cobra"
 )
 
@@ -31,6 +32,11 @@ func newExportCommand(rt *Runtime) *cobra.Command {
 	cmd.Flags().IntVar(&limit, "limit", 500, "maximum messages for --since/--all (1-500)")
 	_ = cmd.MarkFlagRequired("output")
 	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
+		if !verify {
+			if err := policy.RequireMutationAllowed(); err != nil {
+				return err
+			}
+		}
 		cfg, _, named, err := rt.loadAccount()
 		_ = cfg
 		if err != nil {

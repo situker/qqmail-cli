@@ -11,6 +11,7 @@ import (
 	exporter "github.com/situker/qqmailctl/internal/export"
 	"github.com/situker/qqmailctl/internal/mailmodel"
 	"github.com/situker/qqmailctl/internal/output"
+	"github.com/situker/qqmailctl/internal/policy"
 	"github.com/spf13/cobra"
 )
 
@@ -22,6 +23,9 @@ func newBackupCommand(rt *Runtime) *cobra.Command {
 	_ = cmd.MarkFlagRequired("plan")
 	_ = cmd.MarkFlagRequired("output")
 	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
+		if err := policy.RequireMutationAllowed(); err != nil {
+			return err
+		}
 		plan, err := cleanupplan.Load(planPath)
 		if err != nil {
 			return &errmap.Error{Kind: errmap.ParseError, Message: "清理计划校验失败", Cause: err}

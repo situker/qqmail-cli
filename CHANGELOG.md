@@ -13,6 +13,8 @@ All notable development changes are recorded here. Formal releases remain owner-
 - Incremental `sync` and `search --local` commands with embedded output schemas.
 - Deterministic `triage analyze`/`triage plan` commands, bounded TOML extension rules, schema-validated plan files, and sanitized Markdown review output.
 - `backup --plan`, which exports and verifies every planned message before recording the backup root in the plan.
+- Three-gate `clean`, dry-run-first `message mark-read`/`message move`, polling `watch --jsonl`, cache inspection/whole-file clearing, and dual SQLite/JSONL audit logs.
+- Runtime `QQMAILCTL_READONLY` enforcement and agent-info risk levels for read, mutate, and destructive commands.
 
 ### Changed
 
@@ -25,3 +27,4 @@ All notable development changes are recorded here. Formal releases remain owner-
 - S4/S5-write/S9/S11 require both an explicit write switch and dedicated-test-account confirmation.
 - Message previews and bodies remain absent from the cache unless explicitly enabled; opted-in cache content is documented as unencrypted.
 - Human-review Markdown removes control and bidi characters and entity-escapes Markdown syntax from every email-derived field.
+- Server mutation calls are confined to one reviewed IMAP boundary and one policy call site. Wire and AST guards reject any EXPUNGE path.

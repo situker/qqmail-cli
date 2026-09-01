@@ -7,6 +7,7 @@ import (
 
 	"github.com/situker/qqmailctl/internal/errmap"
 	"github.com/situker/qqmailctl/internal/output"
+	"github.com/situker/qqmailctl/internal/policy"
 	"github.com/situker/qqmailctl/internal/syncer"
 	"github.com/spf13/cobra"
 )
@@ -17,6 +18,9 @@ func newSyncCommand(rt *Runtime) *cobra.Command {
 	cmd.Flags().BoolVar(&cachePreviews, "cache-previews", false, "store unencrypted text previews (first 2 KiB) in the local cache")
 	cmd.Flags().BoolVar(&cacheBodies, "cache-bodies", false, "store unencrypted text bodies in the local cache")
 	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
+		if err := policy.RequireMutationAllowed(); err != nil {
+			return err
+		}
 		ctx, cancel := rt.context()
 		defer cancel()
 		reader, named, err := rt.connect(ctx)

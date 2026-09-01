@@ -14,6 +14,7 @@ import (
 	"github.com/situker/qqmailctl/internal/output"
 	"github.com/situker/qqmailctl/internal/secrets"
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 )
 
 type BuildInfo struct {
@@ -23,23 +24,29 @@ type BuildInfo struct {
 }
 
 type Runtime struct {
-	Build       BuildInfo
-	JSON        bool
-	Account     string
-	Folder      string
-	Timeout     time.Duration
-	Verbose     bool
-	ConfigPath  string
-	AuthCodeEnv bool
-	Out         io.Writer
-	Err         io.Writer
-	In          io.Reader
-	Secrets     secrets.Provider
-	Dial        func(context.Context, account.Named, string) (imapx.Reader, error)
-	IndexOpen   func(string, bool) (*index.DB, error)
-	started     time.Time
-	current     string
-	resultCode  int
+	Build        BuildInfo
+	JSON         bool
+	Account      string
+	Folder       string
+	Timeout      time.Duration
+	Verbose      bool
+	ConfigPath   string
+	AuthCodeEnv  bool
+	Out          io.Writer
+	Err          io.Writer
+	In           io.Reader
+	Secrets      secrets.Provider
+	Dial         func(context.Context, account.Named, string) (imapx.Reader, error)
+	DialMutator  func(context.Context, account.Named, string) (imapx.Mutator, error)
+	IndexOpen    func(string, bool) (*index.DB, error)
+	IndexInspect func(string) (index.Inspection, error)
+	IndexClear   func(string) ([]string, error)
+	AuditAppend  func(string, index.AuditEntry) error
+	AuditRead    func(string, int) ([]index.AuditEntry, error)
+	IsTerminal   func(io.Reader) bool
+	started      time.Time
+	current      string
+	resultCode   int
 }
 
 func Execute(build BuildInfo) int {
@@ -79,9 +86,32 @@ func NewRoot(rt *Runtime) *cobra.Command {
 	if rt.IndexOpen == nil {
 		rt.IndexOpen = index.Open
 	}
+	if rt.IndexInspect == nil {
+		rt.IndexInspect = index.InspectAccount
+	}
+	if rt.IndexClear == nil {
+		rt.IndexClear = index.Clear
+	}
+	if rt.AuditAppend == nil {
+		rt.AuditAppend = index.AppendStandaloneAudit
+	}
+	if rt.AuditRead == nil {
+		rt.AuditRead = index.ReadAuditJSONL
+	}
+	if rt.DialMutator == nil {
+		rt.DialMutator = func(ctx context.Context, cfg account.Named, authCode string) (imapx.Mutator, error) {
+			return imapx.DialMutatorWithVersion(ctx, cfg, authCode, rt.Build.Version)
+		}
+	}
+	if rt.IsTerminal == nil {
+		rt.IsTerminal = func(reader io.Reader) bool {
+			file, ok := reader.(*os.File)
+			return ok && term.IsTerminal(int(file.Fd()))
+		}
+	}
 	root := &cobra.Command{
 		Use:           "qqmailctl",
-		Short:         "Unofficial read-only QQ Mail CLI",
+		Short:         "Unofficial safety-first QQ Mail CLI",
 		SilenceErrors: true,
 		SilenceUsage:  true,
 		PersistentPreRun: func(cmd *cobra.Command, _ []string) {
@@ -105,6 +135,8 @@ func NewRoot(rt *Runtime) *cobra.Command {
 		newExportCommand(rt), newDoctorCommand(rt), newAgentInfoCommand(rt), newSchemaCommand(rt),
 		newSyncCommand(rt), newLocalSearchCommand(rt),
 		newTriageCommand(rt), newBackupCommand(rt),
+		newCleanCommand(rt),
+		newCacheCommand(rt), newAuditCommand(rt), newWatchCommand(rt),
 	)
 	return root
 }
@@ -154,6 +186,24 @@ func (rt *Runtime) connect(ctx context.Context) (imapx.Reader, account.Named, er
 	}
 	reader, err := rt.Dial(ctx, named, authCode)
 	return reader, named, err
+}
+
+func (rt *Runtime) connectMutator(ctx context.Context) (imapx.Mutator, account.Named, error) {
+	_, _, named, err := rt.loadAccount()
+	if err != nil {
+		return nil, named, err
+	}
+	provider := rt.Secrets
+	if rt.AuthCodeEnv {
+		provider = secrets.Environment{}
+		_, _ = fmt.Fprintln(rt.Err, "凭证来源：环境变量（仅限本次调用）")
+	}
+	authCode, err := provider.Get(named.Email)
+	if err != nil {
+		return nil, named, err
+	}
+	writer, err := rt.DialMutator(ctx, named, authCode)
+	return writer, named, err
 }
 
 func writeResult(rt *Runtime, cmd *cobra.Command, data any, text func(io.Writer) error) error {

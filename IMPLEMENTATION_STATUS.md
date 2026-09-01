@@ -39,6 +39,19 @@ v0.2 and v0.3 development is in progress. Completed slices remain independently 
 - Contract schemas and command-level schema tests are present for `sync` and `search`.
 - `triage analyze` and `triage plan`: deterministic built-in classification, domain/age/size/unread-rate buckets, bounded user TOML regular-expression rules, embedded plan-schema validation, and a sender-grouped Markdown review whose untrusted fields are control/bidi stripped and Markdown entity-escaped.
 - `backup --plan`: reuses the `.eml` export/HMAC engine, merges into one manifest, verifies the completed local backup, and only then records the absolute `backup_root` in the schema-valid plan. Manifest entries now add the optional `message_id` server-truth comparison key.
+- `clean --plan`: dry-run by default; execute requires manifest HMAC and local hash verification, per-message UIDVALIDITY/RFC822.SIZE/Message-ID server checks, optional paranoid full-body SHA-256, and exact-count confirmation on a real TTY. A single failure rejects the whole queue before mutation.
+- Mutation boundary: go-imap write calls exist only in `internal/imapx/mutate.go`, are callable only by `internal/policy`, and have AST and wire-transcript guards. MOVE is used only when advertised. The S5-pending fallback is COPY + destination confirmation + STORE `\\Deleted`, never any form of expunge; its report marks the source as retained.
+- `message mark-read` and `message move`: dry-run defaults, execute/TTY gates, centralized policy, SQLite audit plus append-only JSONL.
+- `watch --jsonl`: 60-second polling by default, UID watermark deltas and UIDVALIDITY reset events; IDLE is absent from the product path.
+- `cache inspect`, dry-run-first `cache clear --execute`, and `audit list`. Cache clear removes the whole DB/WAL/SHM set; the content-free audit JSONL remains independently readable and records the clear itself.
+- `QQMAILCTL_READONLY=1` blocks every declared mutate/destructive command before credential access or network dialing. `agent-info` reports the live readonly state and read/mutate/destructive risk levels.
+- All v0.2 commands have embedded data/event schemas and command-level contract tests. The development version is `0.2.0-dev`.
+
+### Deviations and conservative decisions
+
+- The dedicated-account S5 write probe has not been authorized, so the fallback deliberately stops after COPY confirmation and per-UID STORE `\\Deleted`; it does not use UID EXPUNGE even when UIDPLUS is advertised. This is the conservative branch required by the plan.
+- `cache clear` adds an `--execute` plus TTY `CLEAR` confirmation beyond the reserved command sketch. This is additive and does not alter existing contract shapes.
+- No real-account mutation was run during implementation. Only the dual-gated probe can authorize such a test.
 
 ## Externally blocked / deliberately not performed
 

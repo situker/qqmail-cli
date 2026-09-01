@@ -3,6 +3,7 @@ package index
 import (
 	"context"
 	"database/sql"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -104,6 +105,24 @@ func TestSearchUsesChineseBigramsAndLeavesBodiesNullByDefault(t *testing.T) {
 func TestBigrams(t *testing.T) {
 	if got, want := Bigrams("中文 A"), "中文 a"; got != want {
 		t.Fatalf("Bigrams=%q, want %q", got, want)
+	}
+}
+
+func TestRecordAuditWritesDatabaseAndJSONL(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "cache.db")
+	store, err := OpenPath(path, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.RecordAudit(context.Background(), AuditEntry{Command: "message.move", Action: "move", Result: "ok"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Close(); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(path + ".audit.jsonl")
+	if err != nil || !strings.Contains(string(raw), `"command":"message.move"`) {
+		t.Fatalf("audit JSONL missing: %q err=%v", raw, err)
 	}
 }
 

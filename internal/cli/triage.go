@@ -12,6 +12,7 @@ import (
 	"github.com/situker/qqmailctl/internal/cleanupplan"
 	"github.com/situker/qqmailctl/internal/errmap"
 	"github.com/situker/qqmailctl/internal/output"
+	"github.com/situker/qqmailctl/internal/policy"
 	"github.com/situker/qqmailctl/internal/triage"
 	"github.com/spf13/cobra"
 )
@@ -47,6 +48,9 @@ func newTriagePlanCommand(rt *Runtime) *cobra.Command {
 	cmd.Flags().StringVar(&rulesPath, "rules", "", "optional TOML rules file")
 	_ = cmd.MarkFlagRequired("output")
 	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
+		if err := policy.RequireMutationAllowed(); err != nil {
+			return err
+		}
 		plan, _, accountName, err := buildTriage(rt, rulesPath)
 		if err != nil {
 			return err

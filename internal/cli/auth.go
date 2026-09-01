@@ -11,6 +11,7 @@ import (
 	"github.com/situker/qqmailctl/internal/account"
 	"github.com/situker/qqmailctl/internal/errmap"
 	"github.com/situker/qqmailctl/internal/output"
+	"github.com/situker/qqmailctl/internal/policy"
 	"github.com/situker/qqmailctl/internal/secrets"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
@@ -32,6 +33,9 @@ func newAuthLoginCommand(rt *Runtime) *cobra.Command {
 	cmd.Flags().StringVar(&name, "name", "personal", "local account name")
 	cmd.Flags().BoolVar(&fromStdin, "auth-code-stdin", false, "read the authorization code from standard input")
 	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
+		if err := policy.RequireMutationAllowed(); err != nil {
+			return err
+		}
 		if email == "" {
 			if rt.JSON {
 				return &errmap.Error{Kind: errmap.Usage, Message: "--json 模式下必须提供 --email"}
@@ -147,6 +151,9 @@ func newAuthLogoutCommand(rt *Runtime) *cobra.Command {
 	cmd := &cobra.Command{Use: "logout", Short: "Delete a locally stored credential and account reference"}
 	cmd.Flags().StringVar(&name, "name", "", "account name")
 	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
+		if err := policy.RequireMutationAllowed(); err != nil {
+			return err
+		}
 		cfg, path, err := account.Load(rt.ConfigPath)
 		if err != nil {
 			return err

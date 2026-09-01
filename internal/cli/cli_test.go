@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -15,6 +16,7 @@ import (
 	jsonschema "github.com/santhosh-tekuri/jsonschema/v6"
 	"github.com/situker/qqmailctl/internal/account"
 	"github.com/situker/qqmailctl/internal/cleanupplan"
+	"github.com/situker/qqmailctl/internal/errmap"
 	"github.com/situker/qqmailctl/internal/imapx"
 	"github.com/situker/qqmailctl/internal/index"
 	"github.com/situker/qqmailctl/internal/mailmodel"
@@ -43,14 +45,25 @@ func (fakeReader) FetchBodyPeek(context.Context, mailmodel.MsgID, int64) ([]byte
 }
 func (fakeReader) Logout(context.Context) error { return nil }
 
-func TestCommandTreeMatchesReadonlyWhitelist(t *testing.T) {
+func TestCommandTreeMatchesDeclaredRiskCatalog(t *testing.T) {
 	rt := &Runtime{Out: &bytes.Buffer{}, Err: &bytes.Buffer{}, In: strings.NewReader("")}
 	root := NewRoot(rt)
 	got := leafCommandNames(root)
-	want := readonlyCommandNames()
+	want := commandNames()
 	sort.Strings(want)
 	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("command surface changed; review readonly guarantee\ngot:  %v\nwant: %v", got, want)
+		t.Fatalf("command surface changed; review risk catalog\ngot:  %v\nwant: %v", got, want)
+	}
+	for _, path := range []string{"clean", "message mark-read", "message move"} {
+		command, _, err := root.Find(strings.Fields(path))
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, forbidden := range []string{"yes", "force", "no-confirm", "bypass"} {
+			if command.Flags().Lookup(forbidden) != nil {
+				t.Fatalf("unsafe confirmation bypass --%s appeared on %s", forbidden, path)
+			}
+		}
 	}
 }
 
@@ -161,6 +174,12 @@ func TestSyncAndLocalSearchMatchSchemas(t *testing.T) {
 		{[]string{"--config", configPath, "--json", "triage", "analyze"}, "triage.analyze.schema.json"},
 		{[]string{"--config", configPath, "--json", "triage", "plan", "--output", planPath, "--markdown", markdownPath}, "triage.plan.schema.json"},
 		{[]string{"--config", configPath, "--json", "backup", "--plan", backupPlanPath, "--output", backupDir}, "backup.schema.json"},
+		{[]string{"--config", configPath, "--json", "message", "mark-read", backupID}, "message.mark-read.schema.json"},
+		{[]string{"--config", configPath, "--json", "message", "move", backupID, "Trash"}, "message.move.schema.json"},
+		{[]string{"--config", configPath, "--json", "clean", "--plan", backupPlanPath}, "clean.schema.json"},
+		{[]string{"--config", configPath, "--json", "cache", "inspect"}, "cache.inspect.schema.json"},
+		{[]string{"--config", configPath, "--json", "cache", "clear"}, "cache.clear.schema.json"},
+		{[]string{"--config", configPath, "--json", "audit", "list"}, "audit.list.schema.json"},
 	} {
 		var out bytes.Buffer
 		rt := &Runtime{
@@ -170,6 +189,15 @@ func TestSyncAndLocalSearchMatchSchemas(t *testing.T) {
 			IndexOpen: func(_ string, write bool) (*index.DB, error) {
 				return index.OpenPath(cachePath, write)
 			},
+			IndexInspect: func(string) (index.Inspection, error) {
+				store, err := index.OpenPath(cachePath, false)
+				if err != nil {
+					return index.Inspection{}, err
+				}
+				defer func() { _ = store.Close() }()
+				return store.Inspect(context.Background())
+			},
+			AuditRead: func(string, int) ([]index.AuditEntry, error) { return []index.AuditEntry{}, nil },
 		}
 		root := NewRoot(rt)
 		root.SetArgs(tc.args)
@@ -177,6 +205,73 @@ func TestSyncAndLocalSearchMatchSchemas(t *testing.T) {
 			t.Fatal(err)
 		}
 		validateOutput(t, tc.schema, out.Bytes())
+	}
+}
+
+func TestReadonlyEnvironmentBlocksEveryMutatingCommandBeforeDial(t *testing.T) {
+	t.Setenv("QQMAILCTL_READONLY", "1")
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "config.toml")
+	cfg := &account.Config{Schema: account.ConfigSchema, DefaultAccount: "personal", Accounts: map[string]account.Account{"personal": {Email: "user@qq.com"}}}
+	if err := cfg.Save(configPath); err != nil {
+		t.Fatal(err)
+	}
+	id := mailmodel.MsgID{Folder: "INBOX", UIDValidity: 1, UID: 1}.String()
+	planPath := filepath.Join(dir, "plan.json")
+	if err := cleanupplan.Save(planPath, cleanupplan.Plan{Schema: 1, CreatedAt: time.Now(), Items: []cleanupplan.Item{}, Statistics: cleanupplan.Statistics{ByCategory: map[string]int{}, ByFromDomain: map[string]int{}}}); err != nil {
+		t.Fatal(err)
+	}
+	commands := [][]string{
+		{"--config", configPath, "auth", "login", "--email", "user@qq.com", "--auth-code-stdin"},
+		{"--config", configPath, "auth", "logout", "--name", "personal"},
+		{"--config", configPath, "account", "use", "personal"},
+		{"--config", configPath, "attachment", "download", id, "all", "--output", dir},
+		{"--config", configPath, "export", "--all", "--output", dir},
+		{"--config", configPath, "sync"},
+		{"--config", configPath, "triage", "plan", "--output", filepath.Join(dir, "new-plan.json")},
+		{"--config", configPath, "backup", "--plan", planPath, "--output", dir},
+		{"--config", configPath, "message", "mark-read", id, "--execute"},
+		{"--config", configPath, "message", "move", id, "Trash", "--execute"},
+		{"--config", configPath, "clean", "--plan", planPath, "--execute"},
+		{"--config", configPath, "cache", "clear", "--execute"},
+	}
+	for _, args := range commands {
+		dialed := false
+		rt := &Runtime{
+			Out: &bytes.Buffer{}, Err: &bytes.Buffer{}, In: strings.NewReader("abcdefghijklmnop\n1\nCLEAR\n"),
+			Secrets: &secrets.Memory{Values: map[string]string{"user@qq.com": "abcdefghijklmnop"}},
+			Dial: func(context.Context, account.Named, string) (imapx.Reader, error) {
+				dialed = true
+				return fakeReader{}, nil
+			},
+			IndexInspect: func(string) (index.Inspection, error) {
+				return index.Inspection{Path: filepath.Join(dir, "cache.db")}, nil
+			},
+			IsTerminal: func(io.Reader) bool { return true },
+		}
+		root := NewRoot(rt)
+		root.SetArgs(args)
+		err := root.Execute()
+		if err == nil || errmap.Classify(err).Kind != errmap.PolicyDenied || dialed {
+			t.Fatalf("command %v not blocked before dial: err=%v dialed=%v", args, err, dialed)
+		}
+	}
+}
+
+func TestExecuteRejectsNonTTYBeforeMutationDial(t *testing.T) {
+	t.Setenv("QQMAILCTL_READONLY", "0")
+	id := mailmodel.MsgID{Folder: "INBOX", UIDValidity: 1, UID: 1}.String()
+	dialed := false
+	rt := &Runtime{Out: &bytes.Buffer{}, Err: &bytes.Buffer{}, In: strings.NewReader("1\n"), IsTerminal: func(io.Reader) bool { return false }}
+	rt.DialMutator = func(context.Context, account.Named, string) (imapx.Mutator, error) {
+		dialed = true
+		return nil, nil
+	}
+	root := NewRoot(rt)
+	root.SetArgs([]string{"message", "mark-read", id, "--execute"})
+	err := root.Execute()
+	if err == nil || errmap.Classify(err).Kind != errmap.PolicyDenied || dialed {
+		t.Fatalf("non-TTY execution was not blocked before dial: err=%v dialed=%v", err, dialed)
 	}
 }
 

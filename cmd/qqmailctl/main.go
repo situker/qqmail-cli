@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	version = "dev"
+	version = "0.2.0-dev"
 	commit  = "none"
 	date    = "unknown"
 )

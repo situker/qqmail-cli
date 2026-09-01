@@ -8,6 +8,7 @@ import (
 	"github.com/situker/qqmailctl/internal/account"
 	"github.com/situker/qqmailctl/internal/errmap"
 	"github.com/situker/qqmailctl/internal/output"
+	"github.com/situker/qqmailctl/internal/policy"
 	"github.com/situker/qqmailctl/schemas"
 	"github.com/spf13/cobra"
 )
@@ -28,15 +29,12 @@ func newAgentInfoCommand(rt *Runtime) *cobra.Command {
 				accountInfo = map[string]any{"name": named.Name, "configured": true}
 			}
 		}
-		commands := []agentCommand{}
-		for _, name := range readonlyCommandNames() {
-			commands = append(commands, agentCommand{Name: name, Risk: "read"})
-		}
+		commands := commandCatalog()
 		data := map[string]any{
 			"cli_version": rt.Build.Version, "protocol_version": "1", "schema_versions": map[string]string{"output": "1", "manifest": "1", "plan": "1"},
-			"commands": commands, "risk_levels": []string{"read"}, "readonly": true,
+			"commands": commands, "risk_levels": []string{"read", "mutate", "destructive"}, "readonly": policy.Readonly(),
 			"env_switches":    []string{"QQMAILCTL_READONLY", "QQMAILCTL_AUTH_CODE"},
-			"untrusted_paths": []string{"data.envelopes[].subject", "data.envelopes[].from", "data.messages[].subject", "data.messages[].body", "data.attachments[].filename"},
+			"untrusted_paths": []string{"data.envelopes[].subject", "data.envelopes[].from", "data.messages[].subject", "data.messages[].body", "data.attachments[].filename", "data.hits[].subject", "data.hits[].from_addr", "data.hits[].snippet", "$watch_event.envelope.subject", "$watch_event.envelope.from", "plan.items[].subject", "plan.items[].from"},
 			"account":         accountInfo, "configured": configured,
 		}
 		// agent-info is JSON-only by contract, regardless of the global flag.
@@ -73,6 +71,27 @@ func newSchemaCommand(rt *Runtime) *cobra.Command {
 	return cmd
 }
 
-func readonlyCommandNames() []string {
-	return []string{"version", "agent-info", "schema", "completion", "auth.login", "auth.status", "auth.logout", "account.list", "account.use", "doctor", "folder.list", "envelope.list", "message.show", "attachment.list", "attachment.download", "export", "sync", "search", "triage.analyze", "triage.plan", "backup"}
+func commandCatalog() []agentCommand {
+	read := []string{"version", "agent-info", "schema", "completion", "auth.status", "account.list", "doctor", "folder.list", "envelope.list", "message.show", "attachment.list", "search", "triage.analyze", "watch", "cache.inspect", "audit.list"}
+	mutate := []string{"auth.login", "auth.logout", "account.use", "attachment.download", "export", "sync", "triage.plan", "backup", "message.mark-read", "message.move"}
+	destructive := []string{"clean", "cache.clear"}
+	result := make([]agentCommand, 0, len(read)+len(mutate)+len(destructive))
+	for _, name := range read {
+		result = append(result, agentCommand{Name: name, Risk: "read"})
+	}
+	for _, name := range mutate {
+		result = append(result, agentCommand{Name: name, Risk: "mutate"})
+	}
+	for _, name := range destructive {
+		result = append(result, agentCommand{Name: name, Risk: "destructive"})
+	}
+	return result
+}
+
+func commandNames() []string {
+	result := []string{}
+	for _, command := range commandCatalog() {
+		result = append(result, command.Name)
+	}
+	return result
 }

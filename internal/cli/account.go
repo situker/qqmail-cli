@@ -5,6 +5,7 @@ import (
 	"io"
 
 	"github.com/situker/qqmailctl/internal/account"
+	"github.com/situker/qqmailctl/internal/policy"
 	"github.com/spf13/cobra"
 )
 
@@ -41,6 +42,9 @@ func newAccountListCommand(rt *Runtime) *cobra.Command {
 func newAccountUseCommand(rt *Runtime) *cobra.Command {
 	cmd := &cobra.Command{Use: "use <name>", Args: cobra.ExactArgs(1), Short: "Set the default account"}
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		if err := policy.RequireMutationAllowed(); err != nil {
+			return err
+		}
 		cfg, path, err := account.Load(rt.ConfigPath)
 		if err != nil {
 			return err

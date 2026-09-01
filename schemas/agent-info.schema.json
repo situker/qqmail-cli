@@ -14,8 +14,8 @@
             "protocol_version": {"const": "1"},
             "schema_versions": {"type": "object"},
             "commands": {"type": "array", "items": {"type": "object", "required": ["name", "risk"]}},
-            "risk_levels": {"type": "array", "items": {"const": "read"}},
-            "readonly": {"const": true},
+            "risk_levels": {"type": "array", "items": {"enum": ["read", "mutate", "destructive", "send"]}},
+            "readonly": {"type": "boolean"},
             "env_switches": {"type": "array", "items": {"type": "string"}},
             "untrusted_paths": {"type": "array", "items": {"type": "string"}},
             "account": {"type": "object"},
@@ -26,4 +26,3 @@
     }
   ]
 }
-
