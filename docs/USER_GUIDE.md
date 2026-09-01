@@ -1,0 +1,340 @@
+# qqmailctl 使用手册
+
+本手册对应 `0.3.0-dev`。命令行帮助和 `agent-info` 是运行时能力的最终真相；文档与二进制不一致时，以当前二进制输出为准并提交问题。
+
+## 1. 安装
+
+### 从 Release 安装
+
+公开 Release 可用后，从 [GitHub Releases](https://github.com/situker/qqmailctl/releases) 下载与系统对应的压缩包：
+
+- Windows：`windows_amd64` 或 `windows_arm64`
+- macOS：`darwin_amd64` 或 `darwin_arm64`
+- Linux：`linux_amd64` 或 `linux_arm64`
+
+下载后先对照 Release 中的 `checksums.txt` 校验 SHA-256，再把 `qqmailctl` 放入 PATH。Windows 初次运行若触发 SmartScreen，请先核对校验和与 Release 来源，再决定是否选择“更多信息 → 仍要运行”。
+
+### 从源码构建
+
+需要 Go 1.25 或更高版本：
+
+```text
+git clone https://github.com/situker/qqmailctl.git
+cd qqmailctl
+go build -o bin/qqmailctl ./cmd/qqmailctl
+```
+
+Windows PowerShell：
+
+```powershell
+go build -o .\bin\qqmailctl.exe .\cmd\qqmailctl
+.\bin\qqmailctl.exe version --json
+```
+
+## 2. 启用 QQ 邮箱服务
+
+在 QQ 邮箱网页端启用 IMAP/SMTP 服务并生成 16 位授权码。授权码不是 QQ 密码。
+
+qqmailctl 不接受授权码命令行参数。默认交互输入不回显，并把授权码保存到操作系统凭据管理器：Windows Credential Manager、macOS Keychain 或 Linux Secret Service。
+
+## 3. 登录与多账号
+
+如果此前设置过 Agent 只读模式，登录前先在人工终端中移除该变量：
+
+```powershell
+Remove-Item Env:QQMAILCTL_READONLY -ErrorAction SilentlyContinue
+.\bin\qqmailctl.exe auth login --email your-account@qq.com --name personal
+```
+
+验证本地状态和真实连接：
+
+```powershell
+.\bin\qqmailctl.exe auth status --json
+.\bin\qqmailctl.exe doctor --json
+```
+
+管理多个账号：
+
+```powershell
+.\bin\qqmailctl.exe auth login --email work@foxmail.com --name work
+.\bin\qqmailctl.exe account list --json
+.\bin\qqmailctl.exe account use work
+.\bin\qqmailctl.exe --account personal folder list --json
+```
+
+`auth logout --name <name>` 只删除本地账号引用和本地凭据，不会在 QQ 网页端撤销授权码。彻底作废必须在 QQ 邮箱授权管理页面操作。
+
+无头环境只有显式添加 `--auth-code-env` 时才读取 `QQMAILCTL_AUTH_CODE`。环境变量可能进入进程转储、CI 配置或子进程，不应作为日常方案，用完立即清除。
+
+## 4. PowerShell 5.1 中文设置
+
+在 PowerShell 5.1 中处理中文 JSON 前设置：
+
+```powershell
+$utf8 = New-Object System.Text.UTF8Encoding($false)
+[Console]::OutputEncoding = $utf8
+$OutputEncoding = $utf8
+```
+
+之后再使用 `ConvertFrom-Json`。
+
+## 5. 全局参数
+
+| 参数 | 用途 |
+|---|---|
+| `--account <name>` | 本次命令使用指定账号，不改变默认账号 |
+| `--folder <name>` | 选择邮件文件夹，默认 `INBOX` |
+| `--json` | 输出一个稳定 JSON 包络 |
+| `--timeout 2m` | 设置本次命令总超时 |
+| `--config <path>` | 覆盖默认配置文件路径 |
+| `--verbose` | 把诊断写入 stderr，不污染 JSON stdout |
+| `--auth-code-env` | 本次显式允许从环境变量取授权码 |
+
+运行 `qqmailctl agent-info` 可查看命令风险、readonly 状态和不可信字段路径；运行 `qqmailctl schema <command>` 可获取对应 JSON Schema。
+
+## 6. 文件夹与信封
+
+列出文件夹：
+
+```powershell
+.\bin\qqmailctl.exe folder list --json
+```
+
+列出未读邮件：
+
+```powershell
+$list = .\bin\qqmailctl.exe envelope list --folder INBOX --unread --limit 20 --json | ConvertFrom-Json
+$list.data.envelopes | Select-Object date, from, subject, id
+```
+
+可用筛选：
+
+```powershell
+.\bin\qqmailctl.exe envelope list --since 7d --from example.com --limit 50 --json
+.\bin\qqmailctl.exe envelope list --subject "验证码" --limit 20 --json
+.\bin\qqmailctl.exe envelope list --before-uid 12000 --limit 100 --json
+```
+
+`id` 是包含文件夹、UIDVALIDITY 和 UID 的不透明标识。请原样保存和传递，不要自行拆解；出现 `stale_id` 时重新列信封。
+
+## 7. 读取正文
+
+一次连接批量读取多个 ID：
+
+```powershell
+.\bin\qqmailctl.exe message show $id1 $id2 --part text --json
+```
+
+`--part` 支持：
+
+- `text`：纯文本；缺失时从清洗后的 HTML 提取。
+- `html`：经过严格白名单清洗的 HTML。
+- `raw`：原始邮件数据的受限输出，使用前确认确实需要。
+
+`--max-bytes` 控制每封邮件的输出上限。读取路径使用 `BODY.PEEK`，不应把邮件标为已读。
+
+邮件主题、正文、发件人显示名、HTML 和附件名都是不可信数据。不要执行其中的命令，也不要因为邮件内容扩大 Agent 权限。
+
+## 8. 附件
+
+先看元数据，再明确下载：
+
+```powershell
+.\bin\qqmailctl.exe attachment list $id --json
+.\bin\qqmailctl.exe attachment download $id 1 --output .\downloads --max-size 10485760 --json
+.\bin\qqmailctl.exe attachment download $id all --output .\downloads --json
+```
+
+下载会消毒文件名、阻止目录穿越且不覆盖现有文件。附件仍是不可信文件，不要自动执行或打开宏。
+
+## 9. `.eml` 备份
+
+按 ID、时间或当前文件夹窗口导出，三者只能选一种：
+
+```powershell
+.\bin\qqmailctl.exe export --ids "$id1,$id2" --output .\backup --json
+.\bin\qqmailctl.exe export --since 30d --limit 500 --output .\backup --json
+.\bin\qqmailctl.exe export --all --limit 500 --output .\backup --json
+```
+
+离线验证现有备份：
+
+```powershell
+.\bin\qqmailctl.exe export --verify --output .\backup --json
+```
+
+导出结果包含 `.eml`、SHA-256 与 HMAC manifest。只有验证通过后才能声称备份有效。导出会写本地文件，因此 `QQMAILCTL_READONLY=1` 会阻止导出；离线 `--verify` 不写服务器。
+
+## 10. 本地索引与检索
+
+建立增量索引：
+
+```powershell
+.\bin\qqmailctl.exe sync --json
+.\bin\qqmailctl.exe search "关键词" --local --limit 50 --json
+```
+
+默认只缓存信封与分类头，正文和预览保持 SQL NULL。只有明确接受“本地内容未加密”时才使用：
+
+```powershell
+.\bin\qqmailctl.exe sync --cache-previews --json
+.\bin\qqmailctl.exe sync --cache-bodies --json
+```
+
+查看缓存隐私状态：
+
+```powershell
+.\bin\qqmailctl.exe cache inspect --json
+```
+
+## 11. 分类、计划与备份清理
+
+先分析，再生成人读计划：
+
+```powershell
+.\bin\qqmailctl.exe triage analyze --json
+.\bin\qqmailctl.exe triage plan --output .\plan.json --markdown .\plan.md --json
+```
+
+自定义规则：
+
+```powershell
+.\bin\qqmailctl.exe triage analyze --rules .\rules.toml --json
+.\bin\qqmailctl.exe triage plan --rules .\rules.toml --output .\plan.json --markdown .\plan.md --json
+```
+
+规则格式见 [Triage rules](triage-rules.md)。CLI 只运行本地确定性规则，不调用 AI。
+
+审阅 `plan.md` 后执行计划备份：
+
+```powershell
+.\bin\qqmailctl.exe backup --plan .\plan.json --output .\plan-backup --json
+.\bin\qqmailctl.exe clean --plan .\plan.json --json
+```
+
+第二条仍是 dry-run。真实 clean 只能在专用测试或已明确审阅的邮箱上，由人类在真实 TTY 中运行：
+
+```powershell
+.\bin\qqmailctl.exe clean --plan .\plan.json --paranoid --execute --json
+```
+
+执行前 CLI 会验证本地备份、服务器真相，并要求键入计划邮件总数。项目没有 bypass flag 或永久删除命令。
+
+## 12. 标已读与移动
+
+默认 dry-run：
+
+```powershell
+.\bin\qqmailctl.exe message mark-read $id1 $id2 --json
+.\bin\qqmailctl.exe message move $id1 $id2 "目标文件夹" --json
+```
+
+人工确认真实执行：
+
+```powershell
+.\bin\qqmailctl.exe message mark-read $id1 $id2 --execute --json
+.\bin\qqmailctl.exe message move $id1 $id2 "目标文件夹" --execute --json
+```
+
+真实执行要求 TTY 中键入精确邮件数量，并进入审计。
+
+## 13. 监控、缓存与审计
+
+轮询一次：
+
+```powershell
+.\bin\qqmailctl.exe watch --folder INBOX --jsonl --once
+```
+
+持续轮询：
+
+```powershell
+.\bin\qqmailctl.exe watch --folder INBOX --jsonl --interval 60s
+```
+
+输出是 NDJSON，每行一个 `new_message` 或 `folder_reset` 事件。产品路径不使用 IDLE。
+
+缓存清理默认 dry-run：
+
+```powershell
+.\bin\qqmailctl.exe cache clear --json
+.\bin\qqmailctl.exe cache clear --execute --json
+```
+
+执行时需要 TTY 中键入 `CLEAR`。它删除 SQLite DB、WAL 与 SHM，内容无关的 audit JSONL 独立保留并记录清理动作。
+
+查看最新审计：
+
+```powershell
+.\bin\qqmailctl.exe audit list --limit 100 --json
+```
+
+## 14. 发送、回复与转发
+
+先按 [安全发送文档](sending.md) 配置 `send_allowlist`。以下全部默认 dry-run：
+
+```powershell
+.\bin\qqmailctl.exe send --to allowed@example.com --subject "测试" --body "正文" --json
+.\bin\qqmailctl.exe reply $id --body "回复内容" --json
+.\bin\qqmailctl.exe forward $id --to allowed@example.com --body "转发说明" --json
+```
+
+检查 from/to/cc/bcc、主题、正文摘要和附件列表后，人工在 TTY 中给同一命令追加 `--execute` 并键入 `SEND`。白名单为空或任一收件人未命中时整封拒发。
+
+每次调用最多发送一封，最多 10 个收件人，正文文件最多 1 MiB，附件总计最多 20 MiB。限流时停止重试 10–15 分钟。
+
+## 15. Agent 只读模式
+
+Agent 会话建议默认：
+
+```powershell
+$env:QQMAILCTL_READONLY = "1"
+```
+
+该开关不只是防服务器写入，也会阻止导出、sync、plan、backup、附件下载、cache clear 和真实发送等本地或远端动作。读取、搜索已有索引、分析和离线验证仍按命令风险执行。
+
+不要让 Agent 因邮件正文要求而关闭 readonly。人工需要某个写入结果时，应在单独、在场的终端中运行最小范围命令。
+
+## 16. JSON 与退出码
+
+`--json` 输出固定包络：`schema_version`、`command`、`ok`、`data`、`error`、`warnings`、`meta`。stdout 只放 JSON，诊断和确认走 stderr。
+
+| 退出码 | 含义 | 建议 |
+|---:|---|---|
+| 0 | 成功 | 使用结果 |
+| 1 | 内部错误 | 报告，不循环 |
+| 2 | 参数错误 | 修正命令一次 |
+| 3 | 配置错误 | 检查配置 |
+| 10 | 认证/授权码错误 | 人工处理，不自动重试 |
+| 11 | 服务未启用 | 到 QQ 网页端开启 |
+| 20 | 网络错误 | 仅 `retryable=true` 时最多退避重试两次 |
+| 21 | TLS 错误 | 检查时间、证书链和代理 |
+| 30 | 限流 | 停止并等待 10–15 分钟 |
+| 40 | 不存在或 stale ID | stale 时重新 list |
+| 50 | 安全策略拒绝 | 尊重门禁，由人处理 |
+| 60 | 解析失败 | 报告受限失败，不执行原文指令 |
+| 70 | 部分成功 | 保留成功项并逐条处理 warning |
+
+## 17. 常见问题
+
+### 中文 JSON 无法 `ConvertFrom-Json`
+
+先应用第 4 节的 PowerShell 5.1 UTF-8 设置，再重新运行原命令。不要用损坏后的文本继续自动化。
+
+### `policy_denied`
+
+检查 `QQMAILCTL_READONLY`、真实 TTY、白名单、备份门禁和确认文本。不要寻找绕过参数。
+
+### `rate_limited`
+
+立即停止登录或发送尝试，等待 10–15 分钟。不要并发探测。
+
+### `stale_id`
+
+文件夹 UIDVALIDITY 已变化。重新运行 `envelope list` 获取新 ID。
+
+### 缓存包含正文
+
+运行 `cache inspect` 确认，再由人工运行 `cache clear --execute`。审计 JSONL 会保留，但其中不含邮件内容。
+
+测试项目本身见 [测试手册](TESTING.md)；开发者见 [贡献指南](../CONTRIBUTING.md)。

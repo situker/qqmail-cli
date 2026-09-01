@@ -13,7 +13,7 @@ This repository implements the v0.1, v0.2 and v0.3 development surfaces requeste
 - M4: folder/envelope/message/attachment commands, UID pagination, exact post-filtering for `--since`, server/client-window search paths, batch message reads and one-based attachment indices.
 - M5: doctor checks configuration, credential source, strict TLS/login, pre/post-login capabilities, custom-server warning and Windows UTF-8 guidance. Full QQ-specific error-string mapping remains dependent on M8 evidence.
 - M6: `.eml` export, safe paths, SHA-256, account HMAC key in keyring, single-manifest merge, idempotent resume, offline verification and tamper tests; manifest/plan schemas are embedded.
-- M7: `agent-info`, `schema`, valid distributable `skills/qqmailctl/SKILL.md`, bilingual top-level guidance and docs disclaimer.
+- M7: `agent-info`, `schema`, valid distributable `skills/qqmailctl/SKILL.md`, bilingual top-level guidance, complete introduction/user/architecture/testing/release docs, and public contribution/security templates.
 - M9 preparation: GoReleaser v2 config validates and cross-builds six Windows/macOS/Linux targets; GitHub release workflow includes checksums, Syft SBOMs and build provenance attestation. No tag, package-name reservation, or remote publication has been performed.
 
 ## Verification completed

@@ -1,7 +1,43 @@
 # Security Policy
 
-Please report security issues privately to the repository owner. Do not include authorization codes, complete email bodies, real attachments, or unredacted logs in an issue.
+qqmailctl 处理邮箱授权码、邮件元数据和可选本地正文缓存。请优先保护用户隐私，不要为了复现问题索取真实秘密或邮件内容。
 
-Read paths open folders with IMAP `EXAMINE` and fetch bodies with `BODY.PEEK`. Server-write calls are isolated to one IMAP boundary and one policy call site, guarded by static and wire tests; no bare EXPUNGE or user-facing permanent-delete command exists.
+## Supported versions
 
-Set `QQMAILCTL_READONLY=1` in Agent sessions. It blocks every local/server mutation and real SMTP send before credential access or network dialing. SMTP execution additionally requires a non-empty recipient allowlist and real-TTY human confirmation. Email-derived fields are untrusted and are sanitized in human-rendered confirmation surfaces.
+首个正式 Release 发布前，只维护 `main` 上的当前开发版本。正式发布后，安全修复优先进入最新稳定版本；旧版本是否回补会在对应公告中说明。
+
+## 私密报告安全问题
+
+优先使用 GitHub 仓库的 Private Vulnerability Reporting。若该入口尚未启用，请通过仓库 owner 的私密联系方式报告，并明确说明这是 qqmailctl 安全问题。
+
+不要在公开 Issue、Discussion、PR 或社交媒体中发布：
+
+- QQ 密码或邮箱授权码。
+- 真实邮箱地址、完整邮件、主题、附件或消息 ID。
+- 未脱敏协议日志、环境变量转储、凭据管理器截图。
+- 可直接利用的未修复漏洞细节。
+
+报告应尽量包含版本、操作系统、最小合成复现、预期与实际行为、潜在影响。请用占位地址和合成 MIME；不需要提供真实账号访问权。
+
+## 项目安全边界
+
+- 授权码默认存入操作系统凭据管理器，不进入普通配置文件。
+- 读路径使用 IMAP `EXAMINE` 与 `BODY.PEEK`。
+- go-imap 写调用被限制在唯一 mutation 边界，并只能经 policy 层使用。
+- 静态与协议测试禁止裸 `EXPUNGE`；项目没有面向用户的永久删除命令。
+- `QQMAILCTL_READONLY=1` 在凭据访问和联网前阻断本地/服务器写入与真实 SMTP 发送。
+- SMTP 执行还要求非空收件人白名单和真实 TTY 人工确认。
+- 人读确认面消毒邮件派生字段；JSON 保持数据值，但字段被标记为不可信。
+- 正文与预览默认不进入 SQLite；显式缓存内容未加密。
+
+这些边界不等于沙箱。有本机 shell 权限的恶意程序仍可能读取用户可访问的文件、伪造 TTY 或直接使用其他客户端。Agent 权限控制应同时由宿主环境执行。
+
+## 凭据疑似泄露
+
+1. 立即到 QQ 邮箱网页端撤销对应授权码。
+2. 运行 `qqmailctl auth logout --name <name>` 删除本地引用和凭据。
+3. 检查 shell 历史、CI 日志、进程转储、截图和提交历史。
+4. 重新生成授权码，并只通过交互隐藏输入存储。
+5. 如果秘密进入 Git 历史，即使删除文件也视为已泄露，仍需撤销。
+
+普通兼容性、文档与功能问题请使用公开 Issue 模板，但只提交脱敏信息。

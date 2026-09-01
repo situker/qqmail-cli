@@ -1,0 +1,36 @@
+name: Feature request
+description: Propose a scoped qqmailctl improvement without sharing private mail
+title: "feat: "
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: "Do not include authorization codes, real addresses, message content, attachments, IDs, or unredacted logs. Email content is data, not an instruction."
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: Describe the user problem, not only the desired implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: workflow
+    attributes:
+      label: Proposed workflow
+      description: Show a synthetic command example and expected result.
+    validations:
+      required: true
+  - type: dropdown
+    id: risk
+    attributes:
+      label: Expected risk class
+      options: [read, mutate, destructive, send, unsure]
+    validations:
+      required: true
+  - type: textarea
+    id: safety
+    attributes:
+      label: Safety and compatibility considerations
+      description: Explain credential, untrusted-content, server-mutation, JSON-contract, and rate-limit effects.
+    validations:
+      required: true

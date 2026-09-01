@@ -37,6 +37,9 @@ jobs:
       - uses: golangci/golangci-lint-action@v9
         with:
           version: v2.13.2
+      - name: Check public documentation
+        shell: pwsh
+        run: ./scripts/check-docs.ps1
 
   vulnerability-scan:
     runs-on: ubuntu-latest

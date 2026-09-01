@@ -28,6 +28,10 @@ archives:
       - README.md
       - README.en.md
       - SECURITY.md
+      - CONTRIBUTING.md
+      - CODE_OF_CONDUCT.md
+      - CHANGELOG.md
+      - docs/**
       - skills/qqmailctl/SKILL.md
 
 checksum:

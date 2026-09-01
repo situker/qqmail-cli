@@ -18,6 +18,8 @@ All notable development changes are recorded here. Formal releases remain owner-
 - Dry-run-first `send`, `reply`, and `forward` with RFC-compliant UTF-8 MIME, allowlisted recipients, real-TTY `SEND` confirmation, content-free audit, and 465 TLS / 587 STARTTLS transport.
 - Embedded schemas and a `send` agent risk level for the complete v0.3 command surface.
 - v0.3 sending documentation, upgraded Agent skill, and an owner handoff checklist for gated probes and publishing.
+- Public-facing project introduction, architecture, complete user guide, dated test plan and open-source release checklist.
+- Pull-request and feature-request templates plus expanded contribution and security guidance.
 
 ### Changed
 
