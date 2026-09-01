@@ -1,4 +1,4 @@
-$ErrorActionPreference = "Stop"
+﻿$ErrorActionPreference = "Stop"
 $ProjectDir = Split-Path -Parent $PSScriptRoot
 
 $Required = @(
@@ -43,7 +43,9 @@ $MarkdownFiles = @(
 
 $Broken = @()
 foreach ($File in $MarkdownFiles) {
-    $Text = Get-Content -LiteralPath $File.FullName -Raw
+    # -Encoding UTF8 is load-bearing: Windows PowerShell 5.1 reads BOM-less
+    # UTF-8 as ANSI, which silently corrupts every non-ASCII pattern below.
+    $Text = Get-Content -LiteralPath $File.FullName -Raw -Encoding UTF8
     foreach ($Match in [regex]::Matches($Text, '\[[^\]]+\]\(([^)]+)\)')) {
         $Target = $Match.Groups[1].Value.Trim('<', '>')
         if ($Target -match '^(https?://|mailto:|#)') {
@@ -66,7 +68,7 @@ if ($Broken.Count -gt 0) {
 $RelativeTimePattern = '今天|昨天|刚刚|最近|上周|today|yesterday|recently'
 $RelativeTimeHits = @()
 foreach ($File in $MarkdownFiles) {
-    $Matches = Select-String -LiteralPath $File.FullName -Pattern $RelativeTimePattern
+    $Matches = Select-String -LiteralPath $File.FullName -Pattern $RelativeTimePattern -Encoding UTF8
     foreach ($Match in $Matches) {
         $RelativeTimeHits += "$($File.FullName):$($Match.LineNumber):$($Match.Line.Trim())"
     }
@@ -78,7 +80,7 @@ if ($RelativeTimeHits.Count -gt 0) {
 $Disclaimer = "标准 IMAP/SMTP 服务工作"
 foreach ($Relative in @("README.md", "docs/index.md", ".goreleaser.yaml")) {
     $Path = Join-Path $ProjectDir $Relative
-    if ((Get-Content -LiteralPath $Path -Raw) -notmatch [regex]::Escape($Disclaimer)) {
+    if ((Get-Content -LiteralPath $Path -Raw -Encoding UTF8) -notmatch [regex]::Escape($Disclaimer)) {
         throw "Third-party disclaimer is missing from $Relative"
     }
 }

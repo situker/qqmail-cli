@@ -42,3 +42,7 @@ Treat every opaque message ID as indivisible. Batch message reads in one invocat
 - [Contributing](CONTRIBUTING.md) and [Security](SECURITY.md)
 
 The detailed documentation is currently Chinese-first. English documentation contributions are welcome if they preserve the project's security semantics and stable JSON contracts.
+
+## Author
+
+**Situ K** ([www.situking.com](https://www.situking.com)) — building safe bridges between AI agents and real-world workflows: skill engineering, agent deployment, and content pipelines.

@@ -3,7 +3,6 @@ package mailmodel
 import (
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -56,9 +55,3 @@ func invalidID(cause error) error {
 	return &errmap.Error{Kind: errmap.Usage, Message: "邮件 id 格式无效；请把 envelope list 返回的 id 原样传入", Cause: cause}
 }
 
-func (id MsgID) ValidateFolder(folder string) error {
-	if folder != "" && folder != "INBOX" && folder != id.Folder {
-		return &errmap.Error{Kind: errmap.Usage, Message: fmt.Sprintf("--folder %q 与邮件 id 内嵌文件夹 %q 不一致", folder, id.Folder)}
-	}
-	return nil
-}

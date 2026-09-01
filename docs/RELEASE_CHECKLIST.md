@@ -18,12 +18,14 @@ git diff --check
 git log --oneline --decorate -12
 git remote -v
 git tag --list
+git log --all --format="%an <%ae> | %cn <%ce>" | Sort-Object -Unique
 ```
 
 - [ ] 工作区干净。
 - [ ] `origin` 指向 `https://github.com/situker/qqmailctl.git`。
 - [ ] `_internal/`、`bin/`、`dist/`、`spikes/results/` 未被 Git 跟踪。
 - [ ] 没有真实邮箱地址、授权码、邮件正文、私有附件、未脱敏日志或 token。
+- [ ] **提交元数据（author/committer）全部为 `situker@users.noreply.github.com`**——文件内容干净不等于提交历史干净，最后一条命令的输出必须只有 noreply 身份。
 - [ ] 没有错误 tag 或意外大文件。
 
 可用 `git ls-files` 人工复核完整公开清单。不要运行会把凭据值打印出来的环境枚举命令。

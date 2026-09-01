@@ -157,3 +157,7 @@ govulncheck ./...
 机器输出使用 `schema_version: "1"` 的 JSON 包络；JSON 是稳定契约，人读文本不是。贡献前阅读 [CONTRIBUTING.md](CONTRIBUTING.md)，安全问题按 [SECURITY.md](SECURITY.md) 私密报告。
 
 许可证：[Apache License 2.0](LICENSE)。
+
+## 关于作者
+
+**司徒K**（[www.situking.com](https://www.situking.com)）——长期在做「把 AI 安全地接进真实业务」这件事：skill 工程、Agent 落地与内容工厂。想交流 qqmailctl 的设计取舍、Claude/Codex skill 或 AI 落地，欢迎经网站或公众号找到我。

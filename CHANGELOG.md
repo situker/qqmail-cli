@@ -4,6 +4,53 @@ All notable development changes are recorded here. Formal releases remain owner-
 
 ## Unreleased
 
+### Added (2026-09-01 pre-publication hardening round)
+
+- `restore --plan`: the regret window for cleaned mail. Locates each planned
+  message in the server trash by Message-ID + size from the verified backup
+  manifest and moves it back to its original folder; dry-run first, TTY count
+  confirmation, readonly-gated, fully audited.
+- Cleanup-plan safety scope: `triage plan` now targets only the
+  marketing/machine_notification/social_notification categories, the current
+  folder, mail older than 30 days at confidence ≥ 0.8 — and never a flagged
+  (starred) message, with no override. Exclusions are reported per reason and
+  the plan Markdown carries a review warning header. New flags:
+  `--include-category`, `--exclude-category`, `--min-confidence`, `--min-age`,
+  `--all-folders`.
+- `clean --batch-limit` (default 500) caps one execution; re-running a
+  partially executed plan now skips already-gone messages with verified
+  backups instead of rejecting the whole batch.
+- Structured `failure_details` on export results so agents can tell retryable
+  failures from permanent ones.
+
+### Fixed (2026-09-01 pre-publication hardening round)
+
+- Every cobra usage failure now returns the JSON contract (usage/exit 2):
+  unknown subcommands no longer print help to stdout with exit 0, a bare
+  `qqmailctl login` is no longer misclassified as an authentication failure,
+  and `meta.duration_ms` can no longer be garbage.
+- Watch/sync no longer re-announce the newest message on every poll (RFC 3501
+  `N:*` always matches the highest UID; the window filter now drops it).
+- A plain `sync` no longer wipes cached Chinese body bigrams for the recent
+  flag-refresh window.
+- `auth login` re-login preserves the account's send allowlist and host
+  overrides instead of overwriting the entry.
+- Expunge guards now also ban `UIDExpunge` and `UnselectAndExpunge` (CLOSE)
+  and scan the whole imapx tree; the readonly blocking matrix asserts the
+  rejection actually came from the readonly gate.
+- `QQMAILCTL_READONLY` fails closed on unrecognized values; `doctor` reports
+  the live readonly state; text-mode partial results exit 70.
+- Sync fetches in ascending 500-message batches with per-batch watermark
+  commits, so a huge first sync survives timeouts and resumes.
+- Single-line human output flattens newlines from decoded subjects
+  (`SanitizeLine`), closing a fake-table-row spoof in list views and TTY
+  confirmation summaries.
+- `scripts/check-docs.ps1` gained a UTF-8 BOM and explicit UTF-8 reads; the
+  disclaimer and relative-time gates were previously passing only by a
+  double-mojibake coincidence under Windows PowerShell 5.1.
+- GitHub Actions are pinned to commit SHAs and govulncheck to a fixed
+  version; git identity for this repository is the GitHub noreply address.
+
 ### Added
 
 - Rerunnable S1-S11 probe entry points with OS-keyring credential loading, redacted ignored results, and dual gates for rate/write observations.

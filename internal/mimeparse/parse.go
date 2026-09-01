@@ -130,14 +130,21 @@ func parseEnmime(raw []byte) (Result, error) {
 	return result, nil
 }
 
-func SanitizeHTML(value string) string {
+// sanitizePolicy is built once: bluemonday policies are immutable after
+// construction and safe for concurrent use, and batch parsing calls
+// SanitizeHTML per message.
+var sanitizePolicy = func() *bluemonday.Policy {
 	policy := bluemonday.NewPolicy()
 	policy.AllowElements("p", "br", "div", "span", "strong", "em", "b", "i", "u", "ul", "ol", "li", "blockquote", "pre", "code", "table", "thead", "tbody", "tr", "th", "td", "hr", "h1", "h2", "h3", "h4", "h5", "h6", "a")
 	policy.AllowAttrs("href").OnElements("a")
 	policy.AllowStandardURLs()
 	policy.RequireNoFollowOnLinks(true)
 	policy.RequireNoReferrerOnLinks(true)
-	return policy.Sanitize(value)
+	return policy
+}()
+
+func SanitizeHTML(value string) string {
+	return sanitizePolicy.Sanitize(value)
 }
 
 func HTMLToText(value string) string {

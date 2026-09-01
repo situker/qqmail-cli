@@ -1,8 +1,44 @@
 # qqmailctl implementation status
 
-Updated: 2026-09-01
+Updated: 2026-09-01 (post-review hardening round)
 
 This repository implements the v0.1, v0.2 and v0.3 development surfaces requested from `TECHNICAL_PLAN.md`. The binary reports `0.3.0-dev`; it has not been tagged or published.
+
+## 2026-09-01 pre-publication hardening round
+
+A six-track independent review (security red-lines, leak scan, clean-loop
+logic, contract conformance, code quality, test authenticity) was applied in
+full. Every blocker/major and the actionable minors were fixed:
+
+- Anti-accidental-deletion package: cleanup-category whitelist with folder,
+  age, confidence and no-override flagged-mail protection; `clean
+  --batch-limit`; already-gone re-run recovery; the new `restore --plan`
+  command as a regret window; documentation for trash auto-purge and
+  interrupted-clean recovery.
+- Contract: cobra usage failures now emit the JSON envelope with usage/exit 2
+  (previously help text on stdout with exit 0); `duration_ms` sanity; honest
+  `doctor` readonly; structured export failure details; pagination cursor
+  advances past examined windows; `--folder`-vs-id authority enforced on every
+  id-accepting command; untrusted_paths is superset-tested against schema
+  UNTRUSTED annotations.
+- Correctness: RFC 3501 `N:*` watermark echo filtered centrally (watch/sync
+  duplicates); FTS bigram preservation across plain syncs; `auth login`
+  re-login no longer wipes account configuration; ascending batched sync with
+  per-batch watermark commits.
+- Guards: `UIDExpunge`/`UnselectAndExpunge` (CLOSE) banned everywhere and the
+  wire guard rejects CLOSE; imapx scan recursive; readonly env fails closed;
+  the readonly blocking matrix now asserts the readonly gate itself rejected
+  (a sibling guard can no longer satisfy it) and covers `restore`.
+- Tests: clean --execute end-to-end, confirmation-gate three-state tests,
+  SMTP 465→587 fallback semantics on a local TLS fixture, cleaner gate
+  failure-branch table, v0.1 read-command contract suite plus manifest schema
+  validation, MIME per-variant structure assertions, allowlist partial-hit and
+  Bcc coverage, watch reset/echo tests.
+- Hygiene: git identity switched to the GitHub noreply address (history
+  rewrite before first push), Actions pinned to commit SHAs, govulncheck
+  pinned, check-docs.ps1 encoding fixed (its gates previously passed by a
+  double-mojibake coincidence), dead code removed, sanitize policy built once,
+  author sections added to both READMEs.
 
 ## Implemented and locally verified
 

@@ -205,6 +205,17 @@ $list.data.envelopes | Select-Object date, from, subject, id
 
 规则格式见 [Triage rules](triage-rules.md)。CLI 只运行本地确定性规则，不调用 AI。
 
+### 计划的安全范围（防误删的第一道防线）
+
+`triage plan` 默认**不会**把整个邮箱做成清理计划。默认范围：
+
+- 只纳入清理类别：`marketing`、`machine_notification`、`social_notification`。`keep`、`verification`、`receipt`、`other` 与全部自定义类别默认排除（自定义类别需 `--include-category` 显式放行）。
+- 只扫当前 `--folder`（默认 INBOX）；`--all-folders` 才会扩大到全部已索引文件夹。
+- 只纳入 30 天前的邮件（`--min-age`，`0` 关闭）且分类置信度 ≥ 0.8（`--min-confidence`）。
+- **星标（`\Flagged`）邮件永远不进计划，也没有任何开关能放行**——星标是你亲手做的"重要"标记，优先级高于一切规则；clean 执行前还会对服务器上的星标状态再查一次。
+
+被排除的数量与原因在 `triage plan` 输出的 `excluded_by_rule` 和 `plan.md` 头部逐项列出。不想清理的条目，直接从 `plan.json` 的 `items` 里删掉即可。
+
 审阅 `plan.md` 后执行计划备份：
 
 ```powershell
@@ -218,7 +229,22 @@ $list.data.envelopes | Select-Object date, from, subject, id
 .\bin\qqmailctl.exe clean --plan .\plan.json --paranoid --execute --json
 ```
 
-执行前 CLI 会验证本地备份、服务器真相，并要求键入计划邮件总数。项目没有 bypass flag 或永久删除命令。
+执行前 CLI 会验证本地备份、服务器真相，并要求键入计划邮件总数。单次执行上限 500 封（`--batch-limit` 需人工显式提高）。项目没有 bypass flag 或永久删除命令。清理只把邮件移入服务器"已删除"文件夹——注意 QQ 会按其回收站周期自动清空该文件夹。
+
+### 后悔药：restore
+
+清理错了，在回收站被自动清空之前可以整单还原：
+
+```powershell
+.\bin\qqmailctl.exe restore --plan .\plan.json --json
+.\bin\qqmailctl.exe restore --plan .\plan.json --execute --json
+```
+
+第一条是 dry-run，报告每封邮件是否还能在已删除文件夹中找到（按备份 manifest 的 Message-ID 与大小定位）；第二条经 TTY 确认后把找到的邮件移回原文件夹。已被回收站周期清空的邮件无法还原，但其原始 `.eml` 备份仍在 `backup_root` 下。
+
+### 清理中断后怎么办
+
+clean 执行中途断网或超时会留下"部分已移走"的状态。直接重跑同一条 `clean --plan … --execute` 即可：已移走且本地备份验证过的邮件会被判为 `already_gone` 安全跳过，剩余邮件继续过门禁执行，不需要清库重建。
 
 ## 12. 标已读与移动
 
