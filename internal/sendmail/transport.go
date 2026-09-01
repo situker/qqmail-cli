@@ -41,20 +41,35 @@ func Send(ctx context.Context, named account.Named, authCode string, draft Draft
 	return nil
 }
 
+// tlsOverride is a test seam: production code never sets it, tests inject a
+// config that trusts the local fixture certificate.
+var tlsOverride *tls.Config
+
 func dial(ctx context.Context, named account.Named) (*smtp.Client, error) {
 	tlsConfig := &tls.Config{ServerName: named.SMTPHost, MinVersion: tls.VersionTLS12}
+	if tlsOverride != nil {
+		tlsConfig = tlsOverride
+	}
 	if named.SMTPHost == "smtp.qq.com" && named.SMTPPort == 465 {
-		client, err := dialEndpoint(ctx, net.JoinHostPort(named.SMTPHost, "465"), tlsConfig, true)
-		if err == nil {
-			return client, nil
-		}
-		fallback, fallbackErr := dialEndpoint(ctx, net.JoinHostPort(named.SMTPHost, "587"), tlsConfig, false)
-		if fallbackErr == nil {
-			return fallback, nil
-		}
-		return nil, errors.Join(err, fallbackErr)
+		return dialWithFallback(ctx, named.SMTPHost, "465", "587", tlsConfig)
 	}
 	return dialEndpoint(ctx, net.JoinHostPort(named.SMTPHost, fmt.Sprint(named.SMTPPort)), tlsConfig, named.SMTPPort == 465)
+}
+
+// dialWithFallback tries the implicit-TLS primary port and falls back to
+// STARTTLS on the secondary ONLY when the primary connection or TLS setup
+// fails. Authentication or submission rejection on a working primary returns
+// as-is and is never retried elsewhere — retrying could double-deliver.
+func dialWithFallback(ctx context.Context, host, primaryPort, fallbackPort string, tlsConfig *tls.Config) (*smtp.Client, error) {
+	client, err := dialEndpoint(ctx, net.JoinHostPort(host, primaryPort), tlsConfig, true)
+	if err == nil {
+		return client, nil
+	}
+	fallback, fallbackErr := dialEndpoint(ctx, net.JoinHostPort(host, fallbackPort), tlsConfig, false)
+	if fallbackErr == nil {
+		return fallback, nil
+	}
+	return nil, errors.Join(err, fallbackErr)
 }
 
 func dialEndpoint(ctx context.Context, address string, tlsConfig *tls.Config, implicitTLS bool) (*smtp.Client, error) {

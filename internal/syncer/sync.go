@@ -15,6 +15,11 @@ import (
 const (
 	recentFlagWindow = 200
 	previewBytes     = 2 << 10
+	// syncBatchSize bounds one FETCH command and one SQLite transaction. The
+	// watermark advances per committed batch, so a first sync of a huge
+	// mailbox that hits a timeout resumes where it stopped instead of
+	// restarting from zero.
+	syncBatchSize = 500
 )
 
 type Options struct {
@@ -77,13 +82,35 @@ func syncFolder(ctx context.Context, reader imapx.Reader, store *index.DB, folde
 		return FolderResult{}, err
 	}
 	uids := uniqueUIDs(newUIDs, recentUIDs)
-	envelopes, err := reader.FetchEnvelopes(ctx, folder.Name, uidValidity, uids)
+	// Ascending batches: the watermark only ever covers fully committed work,
+	// so an interrupted run can never skip unfetched mail on resume.
+	sort.Slice(uids, func(i, j int) bool { return uids[i] < uids[j] })
+	for start := 0; start < len(uids); start += syncBatchSize {
+		end := start + syncBatchSize
+		if end > len(uids) {
+			end = len(uids)
+		}
+		if err := syncBatch(ctx, reader, store, state.ID, folder.Name, uidValidity, uids[start:end], opts); err != nil {
+			return FolderResult{}, err
+		}
+	}
+	lastSeen := state.LastSeenUID
+	for _, uid := range newUIDs {
+		if uid > lastSeen {
+			lastSeen = uid
+		}
+	}
+	return FolderResult{Name: folder.Name, Indexed: len(newUIDs), UIDValidity: uidValidity, UIDValidityChanged: reset, LastSeenUID: lastSeen}, nil
+}
+
+func syncBatch(ctx context.Context, reader imapx.Reader, store *index.DB, folderID int64, folderName string, uidValidity uint32, uids []uint32, opts Options) error {
+	envelopes, err := reader.FetchEnvelopes(ctx, folderName, uidValidity, uids)
 	if err != nil {
-		return FolderResult{}, err
+		return err
 	}
 	headers, err := reader.FetchHeaderFields(ctx, uids)
 	if err != nil {
-		return FolderResult{}, err
+		return err
 	}
 	headerByUID := make(map[uint32]mailmodel.HeaderFields, len(headers))
 	for _, header := range headers {
@@ -107,11 +134,11 @@ func syncFolder(ctx context.Context, reader imapx.Reader, store *index.DB, folde
 		if opts.CachePreviews || opts.CacheBodies {
 			id, parseErr := mailmodel.ParseMsgID(envelope.ID)
 			if parseErr != nil {
-				return FolderResult{}, parseErr
+				return parseErr
 			}
 			raw, _, fetchErr := reader.FetchBodyPeek(ctx, id, imapx.MaxMessageBytes)
 			if fetchErr != nil {
-				return FolderResult{}, fetchErr
+				return fetchErr
 			}
 			parsed := mimeparse.Parse(raw)
 			if parsed.Text != nil {
@@ -127,16 +154,7 @@ func syncFolder(ctx context.Context, reader imapx.Reader, store *index.DB, folde
 		}
 		messages = append(messages, message)
 	}
-	if err := store.UpsertMessages(ctx, state.ID, messages); err != nil {
-		return FolderResult{}, err
-	}
-	lastSeen := state.LastSeenUID
-	for _, uid := range newUIDs {
-		if uid > lastSeen {
-			lastSeen = uid
-		}
-	}
-	return FolderResult{Name: folder.Name, Indexed: len(newUIDs), UIDValidity: uidValidity, UIDValidityChanged: reset, LastSeenUID: lastSeen}, nil
+	return store.UpsertMessages(ctx, folderID, messages)
 }
 
 func uniqueUIDs(groups ...[]uint32) []uint32 {

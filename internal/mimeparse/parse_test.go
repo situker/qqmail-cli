@@ -70,12 +70,40 @@ func TestSyntheticCorpusFortyMessages(t *testing.T) {
 				if got.Parser == "failed" || got.Subject != chinese || got.Text == nil {
 					t.Fatalf("case %s/%T/%d failed: %#v", charset.label, encoder, variant, got)
 				}
+				assertVariantStructure(t, charset.label, variant, got)
 				count++
 			}
 		}
 	}
 	if count != 40 {
 		t.Fatalf("corpus size=%d, want 40", count)
+	}
+}
+
+// assertVariantStructure makes each of the five MIME shapes actually visible
+// to the assertions: body content, HTML presence, and attachment parsing per
+// variant rather than only "parsed without failing".
+func assertVariantStructure(t *testing.T, label string, variant int, got Result) {
+	t.Helper()
+	switch variant {
+	case 0, 2, 3:
+		if got.Text == nil || !strings.Contains(*got.Text, "fixture body") {
+			t.Fatalf("case %s/%d: text body content missing: %#v", label, variant, got.Text)
+		}
+	}
+	switch variant {
+	case 1, 2, 4:
+		if got.HTML == nil || !strings.Contains(*got.HTML, "fixture body") {
+			t.Fatalf("case %s/%d: sanitized HTML missing: %#v", label, variant, got.HTML)
+		}
+		if strings.Contains(*got.HTML, "<script") {
+			t.Fatalf("case %s/%d: HTML not sanitized", label, variant)
+		}
+	}
+	if variant == 3 {
+		if len(got.Attachments) != 1 || got.Attachments[0].Filename != "fixture.txt" || string(got.Attachments[0].Data) != "fixture" {
+			t.Fatalf("case %s/%d: attachment parse wrong: %#v", label, variant, got.Attachments)
+		}
 	}
 }
 

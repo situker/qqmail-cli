@@ -40,7 +40,16 @@ func (fakeReader) FetchEnvelopes(context.Context, string, uint32, []uint32) ([]m
 func (fakeReader) FetchHeaderFields(context.Context, []uint32) ([]mailmodel.HeaderFields, error) {
 	return nil, nil
 }
-func (fakeReader) FetchMessage(context.Context, mailmodel.MsgID) ([]byte, error) { return nil, nil }
+func (fakeReader) FetchMessage(context.Context, mailmodel.MsgID) ([]byte, error) {
+	return []byte("From: sender@example.com\r\n" +
+		"Subject: fixture\r\n" +
+		"Message-ID: <fixture@example.com>\r\n" +
+		"MIME-Version: 1.0\r\n" +
+		"Content-Type: multipart/mixed; boundary=\"b1\"\r\n\r\n" +
+		"--b1\r\nContent-Type: text/plain; charset=utf-8\r\n\r\nbody\r\n" +
+		"--b1\r\nContent-Type: application/octet-stream\r\nContent-Disposition: attachment; filename=\"data.bin\"\r\nContent-Transfer-Encoding: base64\r\n\r\nAAEC\r\n" +
+		"--b1--\r\n"), nil
+}
 func (fakeReader) FetchBodyPeek(context.Context, mailmodel.MsgID, int64) ([]byte, bool, error) {
 	return []byte("From: sender@example.com\r\nSubject: fixture\r\nMessage-ID: <fixture@example.com>\r\n\r\nbody\r\n"), false, nil
 }

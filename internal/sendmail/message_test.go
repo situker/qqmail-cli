@@ -68,6 +68,19 @@ func TestRecipientAllowlistRequiresEveryRecipient(t *testing.T) {
 	if denied := DeniedRecipients(draft, nil); len(denied) != 2 {
 		t.Fatalf("empty allowlist did not deny all recipients: %v", denied)
 	}
+	// Partial hit: one allowed recipient must not carry a stranger through,
+	// and the denial must name exactly the stranger.
+	partial := Draft{To: []mail.Address{{Address: "one@example.com"}}, Cc: []mail.Address{{Address: "stranger@evil.test"}}}
+	denied := DeniedRecipients(partial, []string{"one@example.com"})
+	if len(denied) != 1 || denied[0] != "stranger@evil.test" {
+		t.Fatalf("partial allowlist hit mishandled: %v", denied)
+	}
+	// Bcc participates in the check like every other recipient.
+	hidden := Draft{To: []mail.Address{{Address: "one@example.com"}}, Bcc: []mail.Address{{Address: "sneak@evil.test"}}}
+	denied = DeniedRecipients(hidden, []string{"one@example.com"})
+	if len(denied) != 1 || denied[0] != "sneak@evil.test" {
+		t.Fatalf("bcc escaped the allowlist: %v", denied)
+	}
 }
 
 func TestHeaderInjectionRejected(t *testing.T) {

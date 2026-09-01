@@ -118,10 +118,21 @@ func pollWatch(ctx context.Context, reader imapx.Reader, folder string, watermar
 		}
 		return []watchEvent{}, nil
 	}
-	ids, err := reader.Search(ctx, imapx.SearchFilter{AfterUID: *watermark})
+	previous := *watermark
+	ids, err := reader.Search(ctx, imapx.SearchFilter{AfterUID: previous})
 	if err != nil {
 		return nil, err
 	}
+	// Defense in depth: imapx.Search already drops UIDs at or below the
+	// watermark (the RFC 3501 "N:*" quirk), but a duplicate event to a
+	// downstream consumer is bad enough to guard twice.
+	fresh := ids[:0]
+	for _, uid := range ids {
+		if uid > previous {
+			fresh = append(fresh, uid)
+		}
+	}
+	ids = fresh
 	if len(ids) == 0 {
 		return []watchEvent{}, nil
 	}
@@ -143,8 +154,8 @@ func pollWatch(ctx context.Context, reader imapx.Reader, folder string, watermar
 		if !ok {
 			continue
 		}
-		copy := envelope
-		events = append(events, watchEvent{SchemaVersion: "1", Event: "new_message", ObservedAt: now, Folder: folder, UIDValidity: uidValidity, Envelope: &copy})
+		event := envelope
+		events = append(events, watchEvent{SchemaVersion: "1", Event: "new_message", ObservedAt: now, Folder: folder, UIDValidity: uidValidity, Envelope: &event})
 	}
 	return events, nil
 }
