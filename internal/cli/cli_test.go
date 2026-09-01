@@ -54,7 +54,7 @@ func TestCommandTreeMatchesDeclaredRiskCatalog(t *testing.T) {
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("command surface changed; review risk catalog\ngot:  %v\nwant: %v", got, want)
 	}
-	for _, path := range []string{"clean", "message mark-read", "message move"} {
+	for _, path := range []string{"clean", "message mark-read", "message move", "send", "reply", "forward"} {
 		command, _, err := root.Find(strings.Fields(path))
 		if err != nil {
 			t.Fatal(err)
@@ -147,7 +147,7 @@ func TestVersionAndAgentInfoMatchSchemas(t *testing.T) {
 func TestSyncAndLocalSearchMatchSchemas(t *testing.T) {
 	configPath := filepath.Join(t.TempDir(), "config.toml")
 	cfg := &account.Config{Schema: account.ConfigSchema, DefaultAccount: "personal", Accounts: map[string]account.Account{
-		"personal": {Email: "user@qq.com"},
+		"personal": {Email: "user@qq.com", SendAllowlist: []string{"sender@example.com", "reader@example.com"}},
 	}}
 	if err := cfg.Save(configPath); err != nil {
 		t.Fatal(err)
@@ -180,6 +180,9 @@ func TestSyncAndLocalSearchMatchSchemas(t *testing.T) {
 		{[]string{"--config", configPath, "--json", "cache", "inspect"}, "cache.inspect.schema.json"},
 		{[]string{"--config", configPath, "--json", "cache", "clear"}, "cache.clear.schema.json"},
 		{[]string{"--config", configPath, "--json", "audit", "list"}, "audit.list.schema.json"},
+		{[]string{"--config", configPath, "--json", "send", "--to", "reader@example.com", "--subject", "fixture", "--body", "hello"}, "send.schema.json"},
+		{[]string{"--config", configPath, "--json", "reply", backupID, "--body", "thanks"}, "reply.schema.json"},
+		{[]string{"--config", configPath, "--json", "forward", backupID, "--to", "reader@example.com", "--body", "FYI"}, "forward.schema.json"},
 	} {
 		var out bytes.Buffer
 		rt := &Runtime{
@@ -234,6 +237,9 @@ func TestReadonlyEnvironmentBlocksEveryMutatingCommandBeforeDial(t *testing.T) {
 		{"--config", configPath, "message", "move", id, "Trash", "--execute"},
 		{"--config", configPath, "clean", "--plan", planPath, "--execute"},
 		{"--config", configPath, "cache", "clear", "--execute"},
+		{"--config", configPath, "send", "--to", "reader@example.com", "--subject", "fixture", "--execute"},
+		{"--config", configPath, "reply", id, "--execute"},
+		{"--config", configPath, "forward", id, "--to", "reader@example.com", "--execute"},
 	}
 	for _, args := range commands {
 		dialed := false

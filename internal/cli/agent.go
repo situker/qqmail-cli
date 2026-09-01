@@ -32,9 +32,9 @@ func newAgentInfoCommand(rt *Runtime) *cobra.Command {
 		commands := commandCatalog()
 		data := map[string]any{
 			"cli_version": rt.Build.Version, "protocol_version": "1", "schema_versions": map[string]string{"output": "1", "manifest": "1", "plan": "1"},
-			"commands": commands, "risk_levels": []string{"read", "mutate", "destructive"}, "readonly": policy.Readonly(),
+			"commands": commands, "risk_levels": []string{"read", "mutate", "destructive", "send"}, "readonly": policy.Readonly(),
 			"env_switches":    []string{"QQMAILCTL_READONLY", "QQMAILCTL_AUTH_CODE"},
-			"untrusted_paths": []string{"data.envelopes[].subject", "data.envelopes[].from", "data.messages[].subject", "data.messages[].body", "data.attachments[].filename", "data.hits[].subject", "data.hits[].from_addr", "data.hits[].snippet", "$watch_event.envelope.subject", "$watch_event.envelope.from", "plan.items[].subject", "plan.items[].from"},
+			"untrusted_paths": []string{"data.envelopes[].subject", "data.envelopes[].from", "data.messages[].subject", "data.messages[].body", "data.attachments[].filename", "data.hits[].subject", "data.hits[].from_addr", "data.hits[].snippet", "$watch_event.envelope.subject", "$watch_event.envelope.from", "plan.items[].subject", "plan.items[].from", "data.summary.from", "data.summary.to[]", "data.summary.cc[]", "data.summary.bcc[]", "data.summary.subject", "data.summary.body_summary", "data.summary.attachments[].filename"},
 			"account":         accountInfo, "configured": configured,
 		}
 		// agent-info is JSON-only by contract, regardless of the global flag.
@@ -75,7 +75,8 @@ func commandCatalog() []agentCommand {
 	read := []string{"version", "agent-info", "schema", "completion", "auth.status", "account.list", "doctor", "folder.list", "envelope.list", "message.show", "attachment.list", "search", "triage.analyze", "watch", "cache.inspect", "audit.list"}
 	mutate := []string{"auth.login", "auth.logout", "account.use", "attachment.download", "export", "sync", "triage.plan", "backup", "message.mark-read", "message.move"}
 	destructive := []string{"clean", "cache.clear"}
-	result := make([]agentCommand, 0, len(read)+len(mutate)+len(destructive))
+	send := []string{"send", "reply", "forward"}
+	result := make([]agentCommand, 0, len(read)+len(mutate)+len(destructive)+len(send))
 	for _, name := range read {
 		result = append(result, agentCommand{Name: name, Risk: "read"})
 	}
@@ -84,6 +85,9 @@ func commandCatalog() []agentCommand {
 	}
 	for _, name := range destructive {
 		result = append(result, agentCommand{Name: name, Risk: "destructive"})
+	}
+	for _, name := range send {
+		result = append(result, agentCommand{Name: name, Risk: "send"})
 	}
 	return result
 }

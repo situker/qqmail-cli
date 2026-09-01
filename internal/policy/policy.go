@@ -6,10 +6,12 @@ import (
 	"os"
 	"strings"
 
+	"github.com/situker/qqmailctl/internal/account"
 	"github.com/situker/qqmailctl/internal/errmap"
 	"github.com/situker/qqmailctl/internal/imapx"
 	"github.com/situker/qqmailctl/internal/index"
 	"github.com/situker/qqmailctl/internal/mailmodel"
+	"github.com/situker/qqmailctl/internal/sendmail"
 )
 
 const ReadonlyEnv = "QQMAILCTL_READONLY"
@@ -17,6 +19,38 @@ const ReadonlyEnv = "QQMAILCTL_READONLY"
 type Service struct {
 	writer imapx.Mutator
 	audit  *index.DB
+}
+
+type MailTransport func(context.Context, account.Named, string, sendmail.Draft, []byte) error
+
+type MailService struct {
+	sender MailTransport
+	audit  *index.DB
+}
+
+func NewMailService(sender MailTransport, audit *index.DB) *MailService {
+	return &MailService{sender: sender, audit: audit}
+}
+
+func (s *MailService) Send(ctx context.Context, named account.Named, authCode string, draft sendmail.Draft, raw []byte, command string) error {
+	if err := RequireMutationAllowed(); err != nil {
+		return err
+	}
+	if s.sender == nil || s.audit == nil {
+		return fmt.Errorf("mail transport and audit store are required")
+	}
+	if _, err := s.audit.RecordAudit(ctx, index.AuditEntry{Command: command, Action: "send_attempt", Result: "attempt"}); err != nil {
+		return err
+	}
+	err := s.sender(ctx, named, authCode, draft, raw)
+	result := "ok"
+	if err != nil {
+		result = "failed"
+	}
+	if _, auditErr := s.audit.RecordAudit(ctx, index.AuditEntry{Command: command, Action: "send", Result: result}); auditErr != nil && err == nil {
+		return auditErr
+	}
+	return err
 }
 
 func New(writer imapx.Mutator, audit *index.DB) *Service {

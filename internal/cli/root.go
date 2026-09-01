@@ -12,7 +12,9 @@ import (
 	"github.com/situker/qqmailctl/internal/imapx"
 	"github.com/situker/qqmailctl/internal/index"
 	"github.com/situker/qqmailctl/internal/output"
+	"github.com/situker/qqmailctl/internal/policy"
 	"github.com/situker/qqmailctl/internal/secrets"
+	"github.com/situker/qqmailctl/internal/sendmail"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 )
@@ -43,6 +45,7 @@ type Runtime struct {
 	IndexClear   func(string) ([]string, error)
 	AuditAppend  func(string, index.AuditEntry) error
 	AuditRead    func(string, int) ([]index.AuditEntry, error)
+	SendMail     policy.MailTransport
 	IsTerminal   func(io.Reader) bool
 	started      time.Time
 	current      string
@@ -98,6 +101,9 @@ func NewRoot(rt *Runtime) *cobra.Command {
 	if rt.AuditRead == nil {
 		rt.AuditRead = index.ReadAuditJSONL
 	}
+	if rt.SendMail == nil {
+		rt.SendMail = sendmail.Send
+	}
 	if rt.DialMutator == nil {
 		rt.DialMutator = func(ctx context.Context, cfg account.Named, authCode string) (imapx.Mutator, error) {
 			return imapx.DialMutatorWithVersion(ctx, cfg, authCode, rt.Build.Version)
@@ -137,6 +143,7 @@ func NewRoot(rt *Runtime) *cobra.Command {
 		newTriageCommand(rt), newBackupCommand(rt),
 		newCleanCommand(rt),
 		newCacheCommand(rt), newAuditCommand(rt), newWatchCommand(rt),
+		newSendCommand(rt), newReplyCommand(rt), newForwardCommand(rt),
 	)
 	return root
 }

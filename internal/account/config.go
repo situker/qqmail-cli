@@ -18,9 +18,12 @@ const ConfigSchema = 1
 var validName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$`)
 
 type Account struct {
-	Email    string `toml:"email" json:"email"`
-	IMAPHost string `toml:"imap_host,omitempty" json:"imap_host"`
-	IMAPPort int    `toml:"imap_port,omitempty" json:"imap_port"`
+	Email         string   `toml:"email" json:"email"`
+	IMAPHost      string   `toml:"imap_host,omitempty" json:"imap_host"`
+	IMAPPort      int      `toml:"imap_port,omitempty" json:"imap_port"`
+	SMTPHost      string   `toml:"smtp_host,omitempty" json:"smtp_host"`
+	SMTPPort      int      `toml:"smtp_port,omitempty" json:"smtp_port"`
+	SendAllowlist []string `toml:"send_allowlist,omitempty" json:"send_allowlist"`
 }
 
 func (a Account) Host() string {
@@ -39,6 +42,18 @@ func (a Account) Port() int {
 
 func (a Account) Address() string { return fmt.Sprintf("%s:%d", a.Host(), a.Port()) }
 
+func (a Account) SMTPAddress() string {
+	host := a.SMTPHost
+	if host == "" {
+		host = "smtp.qq.com"
+	}
+	port := a.SMTPPort
+	if port == 0 {
+		port = 465
+	}
+	return fmt.Sprintf("%s:%d", host, port)
+}
+
 type Config struct {
 	Schema         int                `toml:"schema" json:"schema"`
 	DefaultAccount string             `toml:"default_account" json:"default_account"`
@@ -46,11 +61,14 @@ type Config struct {
 }
 
 type Named struct {
-	Name      string `json:"name"`
-	Email     string `json:"email"`
-	IMAPHost  string `json:"imap_host"`
-	IMAPPort  int    `json:"imap_port"`
-	IsDefault bool   `json:"is_default"`
+	Name          string   `json:"name"`
+	Email         string   `json:"email"`
+	IMAPHost      string   `json:"imap_host"`
+	IMAPPort      int      `json:"imap_port"`
+	SMTPHost      string   `json:"smtp_host"`
+	SMTPPort      int      `json:"smtp_port"`
+	SendAllowlist []string `json:"send_allowlist"`
+	IsDefault     bool     `json:"is_default"`
 }
 
 func DefaultPath() (string, error) {
@@ -137,6 +155,9 @@ func (c *Config) Put(name string, value Account) error {
 	if value.IMAPPort < 0 || value.IMAPPort > 65535 {
 		return &errmap.Error{Kind: errmap.Usage, Message: "IMAP 端口无效"}
 	}
+	if value.SMTPPort < 0 || value.SMTPPort > 65535 {
+		return &errmap.Error{Kind: errmap.Usage, Message: "SMTP 端口无效"}
+	}
 	if c.Accounts == nil {
 		c.Accounts = make(map[string]Account)
 	}
@@ -165,7 +186,15 @@ func (c *Config) Resolve(name string) (Named, error) {
 	if !ok || name == "" {
 		return Named{}, &errmap.Error{Kind: errmap.Config, Message: "尚未配置账号", Suggestion: "先运行 qqmailctl auth login"}
 	}
-	return Named{Name: name, Email: value.Email, IMAPHost: value.Host(), IMAPPort: value.Port(), IsDefault: name == c.DefaultAccount}, nil
+	smtpHost := value.SMTPHost
+	if smtpHost == "" {
+		smtpHost = "smtp.qq.com"
+	}
+	smtpPort := value.SMTPPort
+	if smtpPort == 0 {
+		smtpPort = 465
+	}
+	return Named{Name: name, Email: value.Email, IMAPHost: value.Host(), IMAPPort: value.Port(), SMTPHost: smtpHost, SMTPPort: smtpPort, SendAllowlist: append([]string(nil), value.SendAllowlist...), IsDefault: name == c.DefaultAccount}, nil
 }
 
 func (c *Config) List() []Named {
@@ -176,8 +205,8 @@ func (c *Config) List() []Named {
 	sort.Strings(names)
 	result := make([]Named, 0, len(names))
 	for _, name := range names {
-		value := c.Accounts[name]
-		result = append(result, Named{Name: name, Email: value.Email, IMAPHost: value.Host(), IMAPPort: value.Port(), IsDefault: name == c.DefaultAccount})
+		named, _ := c.Resolve(name)
+		result = append(result, named)
 	}
 	return result
 }
