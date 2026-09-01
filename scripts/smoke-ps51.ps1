@@ -16,7 +16,7 @@ $Agent = (& $Binary agent-info | ConvertFrom-Json)
 if (-not $Agent.ok -or $Agent.data.readonly) {
     throw "agent-info default readonly state failed"
 }
-if ($Agent.data.risk_levels -notcontains "mutate" -or $Agent.data.risk_levels -notcontains "destructive") {
+if ($Agent.data.risk_levels -notcontains "mutate" -or $Agent.data.risk_levels -notcontains "destructive" -or $Agent.data.risk_levels -notcontains "send") {
     throw "agent-info risk catalog failed"
 }
 

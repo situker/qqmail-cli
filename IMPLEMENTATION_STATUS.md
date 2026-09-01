@@ -2,9 +2,7 @@
 
 Updated: 2026-09-01
 
-This repository implements the v0.1 read-only product surface from `TECHNICAL_PLAN.md`. It has not been tagged or published.
-
-v0.2 and v0.3 development is in progress. Completed slices remain independently buildable and are committed only after their quality gates pass.
+This repository implements the v0.1, v0.2 and v0.3 development surfaces requested from `TECHNICAL_PLAN.md`. The binary reports `0.3.0-dev`; it has not been tagged or published.
 
 ## Implemented and locally verified
 
@@ -31,7 +29,7 @@ v0.2 and v0.3 development is in progress. Completed slices remain independently 
 - Owner-operated live QQ Mail smoke on Windows (2026-09-01) — authorization verified and saved, unread envelope listing and message reading succeeded, and both a second CLI query and the QQ web UI confirmed that `message show` preserved the unread state. The redacted observation is in `docs/compat/qq-20260901.md`.
 - Read-only S1/S2/S3/S5/S6/S7/S10 observations (2026-09-01) — capability/authentication/search/UIDVALIDITY/short-IDLE/visibility-baseline/STARTTLS evidence is recorded in `docs/compat/qq-20260901-readonly-spikes.md`. All raw mailbox counts and hashes remain in Git-ignored local output.
 
-## v0.2 implementation progress
+## v0.2 implemented
 
 - SQLite index foundation: `modernc.org/sqlite` v1.57.0, numbered `PRAGMA user_version` migration, WAL, 5-second busy timeout, OS-level single-writer file lock, external-content FTS5, per-folder UID watermarks, UIDVALIDITY reset semantics, and audit storage.
 - `sync`: all selectable folders are read with EXAMINE/PEEK semantics; new UIDs are fetched above `last_seen_uid`, the recent 200-message window refreshes flags, and classification headers are fetched without downloading bodies. `--cache-previews` and `--cache-bodies` are explicit opt-ins; both fields remain SQL NULL by default.
@@ -45,17 +43,31 @@ v0.2 and v0.3 development is in progress. Completed slices remain independently 
 - `watch --jsonl`: 60-second polling by default, UID watermark deltas and UIDVALIDITY reset events; IDLE is absent from the product path.
 - `cache inspect`, dry-run-first `cache clear --execute`, and `audit list`. Cache clear removes the whole DB/WAL/SHM set; the content-free audit JSONL remains independently readable and records the clear itself.
 - `QQMAILCTL_READONLY=1` blocks every declared mutate/destructive command before credential access or network dialing. `agent-info` reports the live readonly state and read/mutate/destructive risk levels.
-- All v0.2 commands have embedded data/event schemas and command-level contract tests. The development version is `0.2.0-dev`.
+- All v0.2 commands have embedded data/event schemas and command-level contract tests. The intermediate `0.2.0-dev` milestone was independently green before v0.3 work began.
+
+## v0.3 implemented
+
+- `send`: `go-smtp` v0.25.0 with QQ-default 465 implicit TLS and connection-failure fallback to 587 STARTTLS, TLS 1.2 minimum, PLAIN authorization-code authentication, bounded timeouts and SMTP error classification. Rate-limit responses map to `rate_limited` / exit 30.
+- MIME construction: RFC 2047 Chinese subject/display-name encoding, MIME parameter encoding for Chinese attachment names, quoted-printable UTF-8 bodies, base64 attachments, Bcc omitted from MIME headers, header-injection guards, 1 MiB body-file limit and 20 MiB combined attachment limit.
+- Sending policy: dry-run by default with a sanitized from/to/cc/bcc/subject/body/attachment summary; execution requires a non-empty account allowlist matching every recipient, a real TTY, exact `SEND` confirmation and `QQMAILCTL_READONLY` disabled. One invocation submits at most one message and exposes no bypass flag.
+- `reply` and `forward`: BODY.PEEK source reads, `Reply-To` preference, correct `Re:`/`Fwd:` prefixing, reply `In-Reply-To` plus cumulative `References`, quoted original text and forwarded attachments. They use every `send` gate.
+- Audit: every actual SMTP attempt/result is recorded in SQLite and the content-free JSONL; credentials, recipients, subjects, bodies and attachment names are excluded.
+- `agent-info` reports `send` risk for all three commands and lists every new untrusted summary path. Each command has an embedded schema and command-level contract validation.
+- The repository Skill now covers v0.2/v0.3 commands, the complete exit decision table, default Agent readonly discipline, and mandatory human presence for `clean` and SMTP execution.
+- MCP was deliberately not implemented.
 
 ### Deviations and conservative decisions
 
 - The dedicated-account S5 write probe has not been authorized, so the fallback deliberately stops after COPY confirmation and per-UID STORE `\\Deleted`; it does not use UID EXPUNGE even when UIDPLUS is advertised. This is the conservative branch required by the plan.
 - `cache clear` adds an `--execute` plus TTY `CLEAR` confirmation beyond the reserved command sketch. This is additive and does not alter existing contract shapes.
 - No real-account mutation was run during implementation. Only the dual-gated probe can authorize such a test.
+- The command surface composes exactly one SMTP envelope per process, so the requested per-invocation cap is one. A 2-second interval constant is reserved for any future in-process batching; it is not represented as a cross-process anti-abuse guarantee.
+- The SMTP fallback is intentionally limited to 465 connection/TLS setup failure. Authentication or submission rejection on a working 465 connection is returned as-is and is never retried on 587, preventing accidental duplicate delivery.
+- No real SMTP message was sent during implementation; all execution-path tests use an injected in-memory transport.
 
 ## Externally blocked / deliberately not performed
 
 - S4, the S5 write phase, the second S7 web-option snapshot, S8, S9 and S11 remain gated/manual. The read-only observations above do not replace dedicated-account write/rate-limit evidence.
 - macOS Keychain and a headless Linux Secret Service failure path still need platform CI/real-host confirmation.
-- Remote GitHub repository creation, first commit, push, tag, npm/PyPI/crates reservation and v0.1.0 publication require the owner's accounts/authorization and were not attempted.
+- Remote GitHub repository creation, push, tag, package-name reservation and publication require the owner's accounts/authorization and were not attempted. Exact handoff steps are in `docs/OWNER_CHECKLIST.md`.
 - The sampled metadata-only QQ UID FETCH response was well formed; the historical malformed full-FETCH variant remains a pending fixture until an exact redacted shape is captured. The implemented timeout guard prevents indefinite blocking.

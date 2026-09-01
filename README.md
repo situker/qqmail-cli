@@ -1,8 +1,8 @@
 # qqmailctl
 
-qqmailctl 是面向人类脚本与 AI Agent 的非官方 QQ 邮箱安全优先 CLI。它通过标准 IMAP 读取邮件，v0.2 增加本地索引、确定性分类、可验证备份和受策略保护的移动/标已读操作，默认零遥测。
+qqmailctl 是面向人类脚本与 AI Agent 的非官方 QQ 邮箱安全优先 CLI。它通过标准 IMAP 读取邮件，提供本地索引、确定性分类、可验证备份和受策略保护的移动/标已读操作；v0.3 通过 SMTP 增加白名单约束的发送、回复和转发，默认零遥测。
 
-> qqmailctl 是独立的第三方开源项目，与腾讯及 QQ 邮箱不存在隶属、合作或官方授权关系；项目通过用户主动开启的标准 IMAP 服务工作。与 qmail 生态的 qmailctl 工具无任何关联。
+> qqmailctl 是独立的第三方开源项目，与腾讯及 QQ 邮箱不存在隶属、合作或官方授权关系；项目通过用户主动开启的标准 IMAP/SMTP 服务工作。与 qmail 生态的 qmailctl 工具无任何关联。
 
 ## 五分钟上手
 
@@ -38,6 +38,26 @@ qqmailctl clean --plan plan.json
 索引只保存信封和分类头，正文与预览默认均为 SQL NULL。`sync --cache-previews` / `--cache-bodies` 会把内容**未加密**写入本机缓存；`cache clear --execute` 删除整个 SQLite DB/WAL/SHM，不使用 `DELETE` 行。只含命令、消息不透明 ID 和结果的审计 JSONL 会独立保留，供 `audit list --json` 查询。
 
 由于 S5 真实写探针尚未由专用测试邮箱人工触发，不支持 MOVE 的服务器会采用保守的 `COPY → 确认副本 → STORE +\\Deleted`，不会执行 expunge，并会明确报告源夹仍有带删除标记的副本。QQ 当前只读能力探针观测到 MOVE，但这不是腾讯的长期承诺。
+
+## v0.3 安全发送
+
+先在账号配置中设置收件人白名单；白名单为空时执行发送必定被拒绝：
+
+```toml
+[accounts.personal]
+email = "your-account@qq.com"
+send_allowlist = ["you@example.com", "*@your-company.example"]
+```
+
+`to`、`cc`、`bcc` 的每一个地址都必须命中白名单。以下命令默认只构建 MIME 并展示完整摘要，不连接 SMTP：
+
+```text
+qqmailctl send --to you@example.com --subject "测试" --body "正文"
+qqmailctl reply <id> --body "回复内容"
+qqmailctl forward <id> --to you@example.com --body "转发说明"
+```
+
+只有 `--execute` 且 stdin 是真实 TTY、人工键入 `SEND` 后才会取授权码并提交。每次调用最多发送一封，不存在确认绕过 flag；`QQMAILCTL_READONLY=1` 会在读取凭证和联网前拒绝 `send`/`reply`/`forward --execute`。SMTP 默认优先 `smtp.qq.com:465` 隐式 TLS，仅在连接建立失败时回退 587 STARTTLS。详情见 `docs/sending.md`。
 
 ## 开发
 

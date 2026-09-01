@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/situker/qqmailctl/schemas/plan.schema.json",
-  "title": "qqmailctl v0.2 cleanup plan (contract only; not executed by v0.1)",
+  "title": "qqmailctl v0.2 cleanup plan",
   "type": "object",
   "required": ["schema", "created_at", "items", "statistics"],
   "properties": {
