@@ -29,7 +29,7 @@ func newCacheCommand(rt *Runtime) *cobra.Command {
 		})
 	}
 	var execute bool
-	clear := &cobra.Command{Use: "clear", Short: "Delete the database, WAL, SHM, and audit JSONL files"}
+	clear := &cobra.Command{Use: "clear", Short: "Delete the database, WAL, and SHM while retaining the audit JSONL"}
 	clear.Flags().BoolVar(&execute, "execute", false, "perform deletion after TTY confirmation")
 	clear.RunE = func(cmd *cobra.Command, _ []string) error {
 		_, _, named, err := rt.loadAccount()

@@ -67,6 +67,17 @@ func TestCommandTreeMatchesDeclaredRiskCatalog(t *testing.T) {
 	}
 }
 
+func TestCacheClearHelpExplainsAuditRetention(t *testing.T) {
+	rt := &Runtime{Out: &bytes.Buffer{}, Err: &bytes.Buffer{}, In: strings.NewReader("")}
+	command, _, err := NewRoot(rt).Find([]string{"cache", "clear"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(command.Short, "retaining the audit JSONL") {
+		t.Fatalf("cache clear help must explain retained audit data: %q", command.Short)
+	}
+}
+
 func leafCommandNames(root *cobra.Command) []string {
 	var result []string
 	var walk func(*cobra.Command)
