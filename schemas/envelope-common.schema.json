@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/situker/qqmailctl/schemas/envelope-common.schema.json",
+  "title": "qqmailctl JSON envelope",
+  "type": "object",
+  "required": ["schema_version", "command", "ok", "data", "error", "warnings", "meta"],
+  "properties": {
+    "schema_version": {"const": "1"},
+    "command": {"type": "string", "minLength": 1},
+    "ok": {"type": "boolean"},
+    "data": {},
+    "error": {
+      "oneOf": [
+        {"type": "null"},
+        {
+          "type": "object",
+          "required": ["code", "message", "retryable"],
+          "properties": {
+            "code": {"type": "string"},
+            "message": {"type": "string"},
+            "retryable": {"type": "boolean"},
+            "suggestion": {"type": "string"},
+            "context": {"type": "object"}
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["code", "message", "retryable"],
+        "properties": {
+          "code": {"type": "string"},
+          "message": {"type": "string"},
+          "id": {"type": "string"},
+          "retryable": {"type": "boolean"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "meta": {"type": "object"}
+  },
+  "additionalProperties": false
+}
+

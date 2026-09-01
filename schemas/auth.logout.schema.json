@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"https://github.com/situker/qqmailctl/schemas/auth.logout.schema.json","allOf":[{"$ref":"envelope-common.schema.json"},{"properties":{"command":{"const":"auth.logout"},"data":{"type":"object","required":["name","local_credential_deleted","remote_authorization_revoked"]}}}]}

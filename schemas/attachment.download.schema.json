@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"https://github.com/situker/qqmailctl/schemas/attachment.download.schema.json","allOf":[{"$ref":"envelope-common.schema.json"},{"properties":{"command":{"const":"attachment.download"},"data":{"type":"object","required":["id","downloaded"],"properties":{"downloaded":{"type":"array"}}}}}]}

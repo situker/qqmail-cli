@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"https://github.com/situker/qqmailctl/schemas/export.schema.json","allOf":[{"$ref":"envelope-common.schema.json"},{"properties":{"command":{"const":"export"},"data":{"type":"object","required":["manifest_path","exported","skipped","verified","failures"]}}}]}

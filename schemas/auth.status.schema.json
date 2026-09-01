@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"https://github.com/situker/qqmailctl/schemas/auth.status.schema.json","allOf":[{"$ref":"envelope-common.schema.json"},{"properties":{"command":{"const":"auth.status"},"data":{"type":"object","required":["name","email","configured","credential_present","credential_source","config_path","custom_server"]}}}]}

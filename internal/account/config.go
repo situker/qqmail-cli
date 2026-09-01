@@ -1,0 +1,183 @@
+package account
+
+import (
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"regexp"
+	"sort"
+	"strings"
+
+	"github.com/pelletier/go-toml/v2"
+	"github.com/situker/qqmailctl/internal/errmap"
+)
+
+const ConfigSchema = 1
+
+var validName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$`)
+
+type Account struct {
+	Email    string `toml:"email" json:"email"`
+	IMAPHost string `toml:"imap_host,omitempty" json:"imap_host"`
+	IMAPPort int    `toml:"imap_port,omitempty" json:"imap_port"`
+}
+
+func (a Account) Host() string {
+	if a.IMAPHost == "" {
+		return "imap.qq.com"
+	}
+	return a.IMAPHost
+}
+
+func (a Account) Port() int {
+	if a.IMAPPort == 0 {
+		return 993
+	}
+	return a.IMAPPort
+}
+
+func (a Account) Address() string { return fmt.Sprintf("%s:%d", a.Host(), a.Port()) }
+
+type Config struct {
+	Schema         int                `toml:"schema" json:"schema"`
+	DefaultAccount string             `toml:"default_account" json:"default_account"`
+	Accounts       map[string]Account `toml:"accounts" json:"accounts"`
+}
+
+type Named struct {
+	Name      string `json:"name"`
+	Email     string `json:"email"`
+	IMAPHost  string `json:"imap_host"`
+	IMAPPort  int    `json:"imap_port"`
+	IsDefault bool   `json:"is_default"`
+}
+
+func DefaultPath() (string, error) {
+	base, err := os.UserConfigDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(base, "qqmailctl", "config.toml"), nil
+}
+
+func Load(path string) (*Config, string, error) {
+	if path == "" {
+		var err error
+		path, err = DefaultPath()
+		if err != nil {
+			return nil, "", &errmap.Error{Kind: errmap.Config, Message: "无法确定配置目录", Cause: err}
+		}
+	}
+	cfg := &Config{Schema: ConfigSchema, Accounts: make(map[string]Account)}
+	raw, err := os.ReadFile(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return cfg, path, nil
+	}
+	if err != nil {
+		return nil, path, &errmap.Error{Kind: errmap.Config, Message: "无法读取配置文件", Cause: err}
+	}
+	if err := toml.Unmarshal(raw, cfg); err != nil {
+		return nil, path, &errmap.Error{Kind: errmap.Config, Message: "配置文件格式损坏", Cause: err}
+	}
+	if cfg.Schema != ConfigSchema {
+		return nil, path, &errmap.Error{Kind: errmap.Config, Message: fmt.Sprintf("不支持的配置版本 %d", cfg.Schema)}
+	}
+	if cfg.Accounts == nil {
+		cfg.Accounts = make(map[string]Account)
+	}
+	return cfg, path, nil
+}
+
+func (c *Config) Save(path string) error {
+	if path == "" {
+		return &errmap.Error{Kind: errmap.Config, Message: "配置路径为空"}
+	}
+	c.Schema = ConfigSchema
+	raw, err := toml.Marshal(c)
+	if err != nil {
+		return err
+	}
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return err
+	}
+	tmp, err := os.CreateTemp(dir, ".config-*.tmp")
+	if err != nil {
+		return err
+	}
+	tmpName := tmp.Name()
+	defer func() { _ = os.Remove(tmpName) }()
+	if err := tmp.Chmod(0o600); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	if _, err := tmp.Write(raw); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	if err := tmp.Sync(); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmpName, path)
+}
+
+func (c *Config) Put(name string, value Account) error {
+	if !validName.MatchString(name) {
+		return &errmap.Error{Kind: errmap.Usage, Message: "账号名称仅允许字母、数字、点、下划线和连字符，最长 64 字符"}
+	}
+	value.Email = strings.TrimSpace(value.Email)
+	if value.Email == "" || !strings.Contains(value.Email, "@") {
+		return &errmap.Error{Kind: errmap.Usage, Message: "邮箱地址格式无效"}
+	}
+	if value.IMAPPort < 0 || value.IMAPPort > 65535 {
+		return &errmap.Error{Kind: errmap.Usage, Message: "IMAP 端口无效"}
+	}
+	if c.Accounts == nil {
+		c.Accounts = make(map[string]Account)
+	}
+	c.Accounts[name] = value
+	if c.DefaultAccount == "" {
+		c.DefaultAccount = name
+	}
+	return nil
+}
+
+func (c *Config) Remove(name string) { delete(c.Accounts, name) }
+
+func (c *Config) Use(name string) error {
+	if _, ok := c.Accounts[name]; !ok {
+		return &errmap.Error{Kind: errmap.Config, Message: "账号不存在：" + name}
+	}
+	c.DefaultAccount = name
+	return nil
+}
+
+func (c *Config) Resolve(name string) (Named, error) {
+	if name == "" {
+		name = c.DefaultAccount
+	}
+	value, ok := c.Accounts[name]
+	if !ok || name == "" {
+		return Named{}, &errmap.Error{Kind: errmap.Config, Message: "尚未配置账号", Suggestion: "先运行 qqmailctl auth login"}
+	}
+	return Named{Name: name, Email: value.Email, IMAPHost: value.Host(), IMAPPort: value.Port(), IsDefault: name == c.DefaultAccount}, nil
+}
+
+func (c *Config) List() []Named {
+	names := make([]string, 0, len(c.Accounts))
+	for name := range c.Accounts {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	result := make([]Named, 0, len(names))
+	for _, name := range names {
+		value := c.Accounts[name]
+		result = append(result, Named{Name: name, Email: value.Email, IMAPHost: value.Host(), IMAPPort: value.Port(), IsDefault: name == c.DefaultAccount})
+	}
+	return result
+}

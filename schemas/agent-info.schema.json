@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/situker/qqmailctl/schemas/agent-info.schema.json",
+  "allOf": [
+    {"$ref": "envelope-common.schema.json"},
+    {
+      "properties": {
+        "command": {"const": "agent-info"},
+        "data": {
+          "type": "object",
+          "required": ["cli_version", "protocol_version", "schema_versions", "commands", "risk_levels", "readonly", "env_switches", "untrusted_paths", "account"],
+          "properties": {
+            "cli_version": {"type": "string"},
+            "protocol_version": {"const": "1"},
+            "schema_versions": {"type": "object"},
+            "commands": {"type": "array", "items": {"type": "object", "required": ["name", "risk"]}},
+            "risk_levels": {"type": "array", "items": {"const": "read"}},
+            "readonly": {"const": true},
+            "env_switches": {"type": "array", "items": {"type": "string"}},
+            "untrusted_paths": {"type": "array", "items": {"type": "string"}},
+            "account": {"type": "object"},
+            "configured": {"type": "boolean"}
+          }
+        }
+      }
+    }
+  ]
+}
+

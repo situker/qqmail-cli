@@ -1,0 +1,53 @@
+version: 2
+
+project_name: qqmailctl
+
+builds:
+  - id: qqmailctl
+    main: ./cmd/qqmailctl
+    binary: qqmailctl
+    env:
+      - CGO_ENABLED=0
+    goos: [windows, darwin, linux]
+    goarch: [amd64, arm64]
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+
+archives:
+  - id: default
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - LICENSE
+      - NOTICE
+      - README.md
+      - README.en.md
+      - SECURITY.md
+      - skills/qqmailctl/SKILL.md
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+sboms:
+  - artifacts: archive
+    disable: false
+    documents:
+      - "{{ .ArtifactName }}.spdx.json"
+
+changelog:
+  use: git
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+
+release:
+  footer: |
+    qqmailctl 是独立的第三方开源项目，与腾讯及 QQ 邮箱不存在隶属、合作或官方授权关系；项目通过用户主动开启的标准 IMAP 服务工作。与 qmail 生态的 qmailctl 工具无任何关联。

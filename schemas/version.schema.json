@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/situker/qqmailctl/schemas/version.schema.json",
+  "allOf": [
+    {"$ref": "envelope-common.schema.json"},
+    {
+      "properties": {
+        "command": {"const": "version"},
+        "data": {
+          "type": "object",
+          "required": ["version", "commit", "build_date", "go_version", "os", "arch"],
+          "properties": {
+            "version": {"type": "string"},
+            "commit": {"type": "string"},
+            "build_date": {"type": "string"},
+            "go_version": {"type": "string"},
+            "os": {"type": "string"},
+            "arch": {"type": "string"}
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  ]
+}
+
