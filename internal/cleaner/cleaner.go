@@ -37,7 +37,9 @@ type GateResult struct {
 	AlreadyGone []Failure `json:"already_gone"`
 }
 
-func Verify(ctx context.Context, reader imapx.Reader, plan cleanupplan.Plan, named account.Named, provider secrets.Provider, paranoid bool) (GateResult, error) {
+// Verify runs the three-level gate. progress may be nil; when set it is
+// called after every message so long runs can show a heartbeat.
+func Verify(ctx context.Context, reader imapx.Reader, plan cleanupplan.Plan, named account.Named, provider secrets.Provider, paranoid bool, progress func(done, total int)) (GateResult, error) {
 	if strings.TrimSpace(plan.BackupRoot) == "" {
 		return GateResult{}, fmt.Errorf("plan has no backup_root; run backup --plan first")
 	}
@@ -54,7 +56,10 @@ func Verify(ctx context.Context, reader imapx.Reader, plan cleanupplan.Plan, nam
 	}
 	result := GateResult{Eligible: []Eligible{}, Failures: []Failure{}, AlreadyGone: []Failure{}}
 	seen := map[string]bool{}
-	for _, item := range plan.Items {
+	for index, item := range plan.Items {
+		if progress != nil {
+			progress(index+1, len(plan.Items))
+		}
 		if seen[item.ID] {
 			result.Failures = append(result.Failures, Failure{ID: item.ID, Gate: "local", Reason: "duplicate message ID in plan"})
 			continue
@@ -68,10 +73,6 @@ func Verify(ctx context.Context, reader imapx.Reader, plan cleanupplan.Plan, nam
 		id, parseErr := mailmodel.ParseMsgID(item.ID)
 		if parseErr != nil || entry.UID != id.UID || entry.UIDValidity != id.UIDValidity || entry.FolderRaw != id.Folder {
 			result.Failures = append(result.Failures, Failure{ID: item.ID, Gate: "local", Reason: "plan ID and manifest identity disagree"})
-			continue
-		}
-		if strings.TrimSpace(entry.MessageID) == "" {
-			result.Failures = append(result.Failures, Failure{ID: item.ID, Gate: "server", Reason: "manifest lacks Message-ID required for server-truth comparison"})
 			continue
 		}
 		uidValidity, _, examineErr := reader.Examine(ctx, id.Folder)
@@ -108,8 +109,21 @@ func Verify(ctx context.Context, reader imapx.Reader, plan cleanupplan.Plan, nam
 			result.Failures = append(result.Failures, Failure{ID: item.ID, Gate: "server", Reason: "server header fetch failed"})
 			continue
 		}
-		if len(headers) != 1 || normalizeMessageID(headers[0].MessageID) != normalizeMessageID(entry.MessageID) {
-			result.Failures = append(result.Failures, Failure{ID: item.ID, Gate: "server", Reason: "Message-ID does not match verified backup"})
+		if len(headers) != 1 {
+			result.Failures = append(result.Failures, Failure{ID: item.ID, Gate: "server", Reason: "server header fetch returned unexpected count"})
+			continue
+		}
+		// Message-ID is one of three server-truth dimensions, and wild email
+		// legitimately lacks the header. A missing dimension is not a failed
+		// comparison: when the verified backup has no Message-ID, the message
+		// passes on UIDVALIDITY+UID+RFC822.SIZE — but only if the server side
+		// has none either. Any one-sided presence still rejects.
+		if normalizeMessageID(headers[0].MessageID) != normalizeMessageID(entry.MessageID) {
+			reason := "Message-ID does not match verified backup"
+			if strings.TrimSpace(entry.MessageID) == "" {
+				reason = "server reports a Message-ID but the verified backup has none"
+			}
+			result.Failures = append(result.Failures, Failure{ID: item.ID, Gate: "server", Reason: reason})
 			continue
 		}
 		if paranoid {

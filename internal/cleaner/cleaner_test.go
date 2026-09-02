@@ -22,6 +22,7 @@ type fixtureReader struct {
 	flags         []string
 	sizeDelta     int64
 	messageID     string
+	noMessageID   bool
 	examineErr    error
 	envelopesErr  error
 	envelopesGone bool
@@ -58,7 +59,7 @@ func (f fixtureReader) FetchHeaderFields(context.Context, []uint32) ([]mailmodel
 		return nil, f.headersErr
 	}
 	messageID := f.messageID
-	if messageID == "" {
+	if messageID == "" && !f.noMessageID {
 		messageID = "<fixture@example.com>"
 	}
 	return []mailmodel.HeaderFields{{UID: 7, MessageID: messageID}}, nil
@@ -95,7 +96,7 @@ func gateFixture(t *testing.T) (mailmodel.MsgID, cleanupplan.Plan, account.Named
 func TestThreeLevelGate(t *testing.T) {
 	ctx := context.Background()
 	_, plan, named, provider, raw := gateFixture(t)
-	result, err := Verify(ctx, fixtureReader{raw: raw, uidValidity: 11}, plan, named, provider, true)
+	result, err := Verify(ctx, fixtureReader{raw: raw, uidValidity: 11}, plan, named, provider, true, nil)
 	if err != nil || len(result.Eligible) != 1 || len(result.Failures) != 0 || len(result.AlreadyGone) != 0 {
 		t.Fatalf("gate result=%+v err=%v", result, err)
 	}
@@ -124,7 +125,7 @@ func TestGateFailureBranches(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			result, err := Verify(ctx, tc.reader, plan, named, provider, tc.paranoid)
+			result, err := Verify(ctx, tc.reader, plan, named, provider, tc.paranoid, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -139,10 +140,35 @@ func TestGateFailureBranches(t *testing.T) {
 	}
 }
 
+// Wild email legitimately lacks Message-ID. A missing dimension must not be a
+// failed comparison — but a one-sided presence still rejects.
+func TestGateMessageIDMissingBothSidesPasses(t *testing.T) {
+	ctx := context.Background()
+	raw := []byte("From: sender@example.com\r\nSubject: no msgid fixture\r\n\r\nbody\r\n")
+	id := mailmodel.MsgID{Folder: "INBOX", UIDValidity: 11, UID: 7}
+	named := account.Named{Name: "personal", Email: "user@qq.com"}
+	provider := &secrets.Memory{}
+	backupRoot := filepath.Join(t.TempDir(), "backup")
+	if _, err := exporter.Export(ctx, fixtureReader{raw: raw, uidValidity: 11}, named, []mailmodel.MsgID{id}, backupRoot, provider, "test"); err != nil {
+		t.Fatal(err)
+	}
+	plan := cleanupplan.Plan{Schema: 1, CreatedAt: time.Now(), BackupRoot: backupRoot, Items: []cleanupplan.Item{{ID: id.String()}}}
+	// Both sides lack Message-ID: UIDVALIDITY+UID+SIZE carry the identity.
+	result, err := Verify(ctx, fixtureReader{raw: raw, uidValidity: 11, noMessageID: true}, plan, named, provider, false, nil)
+	if err != nil || len(result.Eligible) != 1 || len(result.Failures) != 0 {
+		t.Fatalf("both-missing case rejected: %+v err=%v", result, err)
+	}
+	// Server reports one while the backup has none: identity is in doubt.
+	result, err = Verify(ctx, fixtureReader{raw: raw, uidValidity: 11, messageID: "<appeared@example.com>"}, plan, named, provider, false, nil)
+	if err != nil || len(result.Failures) != 1 || !strings.Contains(result.Failures[0].Reason, "backup has none") {
+		t.Fatalf("one-sided case not rejected: %+v err=%v", result, err)
+	}
+}
+
 func TestGateAlreadyGoneIsNotAFailure(t *testing.T) {
 	ctx := context.Background()
 	_, plan, named, provider, raw := gateFixture(t)
-	result, err := Verify(ctx, fixtureReader{raw: raw, uidValidity: 11, envelopesGone: true}, plan, named, provider, false)
+	result, err := Verify(ctx, fixtureReader{raw: raw, uidValidity: 11, envelopesGone: true}, plan, named, provider, false, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -157,13 +183,13 @@ func TestGateLocalBranches(t *testing.T) {
 	reader := fixtureReader{raw: raw, uidValidity: 11}
 	duplicate := plan
 	duplicate.Items = []cleanupplan.Item{{ID: id.String()}, {ID: id.String()}}
-	result, err := Verify(ctx, reader, duplicate, named, provider, false)
+	result, err := Verify(ctx, reader, duplicate, named, provider, false, nil)
 	if err != nil || len(result.Failures) != 1 || !strings.Contains(result.Failures[0].Reason, "duplicate") {
 		t.Fatalf("duplicate branch: %+v err=%v", result, err)
 	}
 	missing := plan
 	missing.Items = []cleanupplan.Item{{ID: mailmodel.MsgID{Folder: "INBOX", UIDValidity: 11, UID: 999}.String()}}
-	result, err = Verify(ctx, reader, missing, named, provider, false)
+	result, err = Verify(ctx, reader, missing, named, provider, false, nil)
 	if err != nil || len(result.Failures) != 1 || !strings.Contains(result.Failures[0].Reason, "absent from verified manifest") {
 		t.Fatalf("missing-manifest branch: %+v err=%v", result, err)
 	}

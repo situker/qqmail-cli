@@ -62,13 +62,19 @@ func newCleanCommand(rt *Runtime) *cobra.Command {
 			return err
 		}
 		defer func() { _ = mutator.Logout(context.Background()) }()
-		gate, err := cleaner.Verify(gateCtx, mutator, plan, named, rt.Secrets, paranoid)
+		progress := func(done, total int) {
+			if done%250 == 0 || done == total {
+				_, _ = fmt.Fprintf(rt.Err, "门禁核对中… %d/%d\n", done, total)
+			}
+		}
+		gate, err := cleaner.Verify(gateCtx, mutator, plan, named, rt.Secrets, paranoid, progress)
 		if err != nil {
 			cancelGate()
 			return &errmap.Error{Kind: errmap.PolicyDenied, Message: "备份门禁失败，未执行清理", Cause: err}
 		}
 		if len(gate.Failures) > 0 || len(gate.Eligible)+len(gate.AlreadyGone) != len(plan.Items) {
 			cancelGate()
+			printGateFailures(rt, gate)
 			return &errmap.Error{Kind: errmap.PolicyDenied, Message: "存在未通过三级门禁的邮件，整个清理批次已拒绝", Context: map[string]any{"failures": gate.Failures}}
 		}
 		alreadyGone := make([]map[string]any, 0, len(gate.AlreadyGone))
@@ -138,6 +144,27 @@ func planItemStats(plan cleanupplan.Plan) (int64, map[string]int) {
 		byCategory[item.Category]++
 	}
 	return totalSize, byCategory
+}
+
+// printGateFailures puts the rejection reasons in front of the human on
+// stderr: a refused batch with no explanation is indistinguishable from a
+// broken tool.
+func printGateFailures(rt *Runtime, gate cleaner.GateResult) {
+	byReason := map[string]int{}
+	for _, failure := range gate.Failures {
+		byReason[failure.Gate+"："+failure.Reason]++
+	}
+	_, _ = fmt.Fprintf(rt.Err, "门禁未通过 %d 封（通过 %d、已不在服务器 %d）。原因分布：\n", len(gate.Failures), len(gate.Eligible), len(gate.AlreadyGone))
+	for reason, count := range byReason {
+		_, _ = fmt.Fprintf(rt.Err, "  %4d x %s\n", count, output.SanitizeLine(reason))
+	}
+	limit := len(gate.Failures)
+	if limit > 5 {
+		limit = 5
+	}
+	for _, failure := range gate.Failures[:limit] {
+		_, _ = fmt.Fprintf(rt.Err, "  示例 id：%s\n", failure.ID)
+	}
 }
 
 func printCleanSummary(rt *Runtime, gate cleaner.GateResult, byCategory map[string]int, destination string, paranoid bool) {
