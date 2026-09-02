@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "qqmail-cli",
+  "displayName": "qqmail-cli",
+  "version": "0.1.0",
+  "description": "Safety-first, unofficial QQ Mail CLI skill for scripts and AI agents. Read, search, triage, back up, inspect guarded mutations, and prepare allowlisted send/reply/forward over QQ / Foxmail / vip.qq.com mailboxes via a stable JSON contract. Read-only by default; every server mutation is dry-run + human-gated with no bypass flag.",
+  "author": {
+    "name": "司徒K (Situ K)",
+    "url": "https://www.situking.com"
+  },
+  "homepage": "https://qqmailcli.mianbaoai.com",
+  "repository": "https://github.com/situker/qqmail-cli",
+  "license": "Apache-2.0",
+  "keywords": [
+    "qq-mail",
+    "foxmail",
+    "email",
+    "imap",
+    "smtp",
+    "cli",
+    "claude-skill",
+    "ai-agent",
+    "mailbox",
+    "triage",
+    "backup"
+  ]
+}
