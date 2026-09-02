@@ -10,7 +10,7 @@ require (
 	github.com/emersion/go-smtp v0.25.0
 	github.com/jhillyerd/enmime/v2 v2.4.1
 	github.com/microcosm-cc/bluemonday v1.0.27
-	github.com/pelletier/go-toml/v2 v2.2.4
+	github.com/pelletier/go-toml/v2 v2.4.3
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3
 	github.com/spf13/cobra v1.10.2
 	github.com/zalando/go-keyring v0.2.8
