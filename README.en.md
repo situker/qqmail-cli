@@ -16,14 +16,20 @@
 
 qqmail-cli is a safety-first command-line client for QQ Mail: reading, searching, rule-based triage, verifiable backups, gated cleanup, and allowlisted sending — all through a stable, versioned JSON contract. It does not solve "can I connect to the mailbox"; it solves everything that comes after: whether credentials leak, whether an agent can destroy mail by accident, and whether a hostile email can turn around and steer the agent.
 
-## About the author
+<div align="center">
 
-**司徒K (Situ K)** — a serial entrepreneur and long-term thinker.
+### 👤 About the author
 
-- WeChat Official Account: 司徒K
-- Website: [www.situking.com](https://www.situking.com)
+**司徒K (Situ K)** &nbsp;·&nbsp; serial entrepreneur, long-term thinker
 
-If this project is useful to you, a star is appreciated. To talk AI deployment, skill/agent engineering, or the design trade-offs behind this tool, the WeChat account and the website are both good ways to reach me.
+[![WeChat: 司徒K](https://img.shields.io/badge/WeChat-司徒K-07C160?style=for-the-badge&logo=wechat&logoColor=white)](https://www.situking.com)
+&nbsp;
+[![Website: situking.com](https://img.shields.io/badge/Website-www.situking.com-1E4B8F?style=for-the-badge&logo=googlechrome&logoColor=white)](https://www.situking.com)
+
+If this project is useful to you, a ⭐ star is appreciated.<br/>
+To talk AI deployment, skill/agent engineering, or the design trade-offs behind this tool, the WeChat account and the website are both good ways to reach me.
+
+</div>
 
 ```console
 $ qqmail-cli envelope list --unread --limit 2 --json
@@ -62,13 +68,22 @@ $ qqmail-cli message show "m1_eyJmIjoiSU5CT1giLCJ2IjoxNDI1LCJ1Ijo4MzQ3fQ" \
 
 (The sample is generated from a real run and validates against the project's own schema; live output is compact single-line JSON, pretty-printed here for reading.) List envelopes once, then batch-read every message in a single invocation — ids are opaque tokens, copied verbatim. All reads go through `EXAMINE` + `BODY.PEEK`; the unread state on the server is never touched.
 
+## What it does for you
+
+- **Tidy your mailbox** — group thousands of messages by sender, category, and age to see at a glance who is flooding you.
+- **Clear out junk** — rules pick out marketing and notification mail; it backs everything up locally and waits for your confirmation before moving anything to the trash. Cleaned the wrong thing? `restore` walks the whole batch back, and the local backup is a permanent safety net.
+- **Archive mail** — export messages to local `.eml` files with hash verification you can re-check any time.
+- **Search locally** — build a local index and run full-text search (Chinese included) faster than the web UI, fully offline.
+- **Hand it to an AI agent** — let AI read your mail, extract action items, and draft replies — while reading, deleting, and sending stay separate, and deletion and sending are locked behind your own confirmation.
+- **Send safely** — sending goes through a recipient allowlist and a typed confirmation, one message per invocation, with no way to blast a bulk campaign.
+
 ## Documentation quick links
 
 [Five-minute start](#five-minute-start) · [Complete user guide](docs/USER_GUIDE.md) · [Agent discipline](#for-ai-agents) · [Security model](#security-model) · [Architecture](docs/ARCHITECTURE.md) · [FAQ](#faq)
 
 ## Why qqmail-cli
 
-Plenty of libraries can send and receive mail. Few treat the following as first-class concerns:
+Plenty of libraries can send and receive mail. Few take the following seriously from day one:
 
 - **Credentials never touch plaintext** — the 16-character authorization code lives only in the OS credential store (Windows Credential Manager / macOS Keychain / Linux Secret Service). No command-line flag accepts the authorization code, it never appears in config files, and logs, error output, and even panic traces are redacted.
 - **Reads leave no trace** — the read path is hard-wired to `EXAMINE` + `BODY.PEEK`; looking at a message never marks it read.

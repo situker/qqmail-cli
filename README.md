@@ -16,14 +16,20 @@
 
 qqmail-cli 是一个安全优先的 QQ 邮箱 CLI：读信、检索、分类、备份、带门禁的清理和白名单发送，全部走稳定 JSON 契约。它解决的不是"能不能连上邮箱"，而是连上之后的那些事——凭证会不会泄露、Agent 会不会误删邮件、邮件正文会不会反过来指挥 Agent。
 
-## 关于作者
+<div align="center">
 
-司徒K —— 持续创业者，长期主义践行者。
+### 👤 关于作者
 
-- 公众号：司徒K
-- 个人网站：[www.situking.com](https://www.situking.com)
+**司徒K** &nbsp;·&nbsp; 持续创业者，长期主义践行者
 
-觉得这个项目有用，欢迎点个 Star；想聊 AI 落地、skill/agent 工程或这个项目的设计取舍，公众号和网站都能找到我。
+[![公众号：司徒K](https://img.shields.io/badge/公众号-司徒K-07C160?style=for-the-badge&logo=wechat&logoColor=white)](https://www.situking.com)
+&nbsp;
+[![个人网站：situking.com](https://img.shields.io/badge/个人网站-www.situking.com-1E4B8F?style=for-the-badge&logo=googlechrome&logoColor=white)](https://www.situking.com)
+
+觉得这个项目有用，欢迎点个 ⭐ Star。<br/>
+想聊 AI 落地、skill/agent 工程或这个项目的设计取舍，公众号和网站都能找到我。
+
+</div>
 
 ```console
 $ qqmail-cli envelope list --unread --limit 2 --json
@@ -62,13 +68,22 @@ $ qqmail-cli message show "m1_eyJmIjoiSU5CT1giLCJ2IjoxNDI1LCJ1Ijo4MzQ3fQ" \
 
 （示例由真实运行输出生成并通过项目自身 schema 校验；实际输出为单行紧凑 JSON，此处为阅读排版。）一次列信封、一次批量读全文，`id` 是不透明 token，原样复制即可；读取全程 `EXAMINE` + `BODY.PEEK`——服务器上的未读状态碰都不碰。
 
+## 它能帮你做什么
+
+- **整理邮箱** —— 把成千上万封邮件按发件人、类别、时间归堆，一眼看清谁在给你发垃圾。
+- **清理垃圾邮件** —— 规则挑出营销和通知邮件，先本地全量备份、你亲手确认，再移入回收站；删错了 `restore` 一条命令整单找回，本地备份永久兜底。
+- **备份存档** —— 把邮件导出成本地 `.eml` 文件，带哈希校验，随时可验证完整性。
+- **本地检索** —— 把邮箱建成本地索引，全文搜索（含中文）比网页版快，且全程不联网。
+- **交给 AI Agent** —— 让 AI 帮你读信、提行动项、起草回复；但读是读、删是删、发是发，删除和发送权牢牢卡在你的人工确认里。
+- **安全发送** —— 发信走收件人白名单 + 人工键入确认，每次一封，绝不失控群发。
+
 ## 文档直达
 
 [五分钟上手](#五分钟上手) · [功能与设计全景](docs/OVERVIEW.md) · [完整使用手册](docs/USER_GUIDE.md) · [Agent 使用纪律](#给-ai-agent-用) · [安全模型](#安全模型) · [架构说明](docs/ARCHITECTURE.md) · [FAQ](#faq)
 
 ## 为什么是 qqmail-cli
 
-把邮箱接进自动化，市面上不缺"能收发"的库和工具，缺的是把下面这些事当成一等公民的工具：
+把邮箱接进自动化，市面上不缺"能收发"的库和工具，缺的是从一开始就把下面这些事认真当回事的工具：
 
 - **凭证不落明文** —— 16 位授权码只进操作系统凭据管理器（Windows 凭据管理器 / macOS 钥匙串 / Linux Secret Service）。不存在授权码命令行参数，配置文件、日志、错误输出、panic 栈全部脱敏。
 - **读不留痕** —— 只读路径永远 `EXAMINE` + `BODY.PEEK`，看邮件不会把它标成已读。
