@@ -1,9 +1,30 @@
 qqmailctl
 Copyright 2026 Situker
 
-This product includes software developed by third parties. Their licenses are
-available from the corresponding upstream modules recorded in go.mod and go.sum.
+Licensed under the Apache License, Version 2.0 (see LICENSE).
 
 qqmailctl is an independent, unofficial project. It is not affiliated with,
-endorsed by, or authorized by Tencent or QQ Mail.
+endorsed by, or authorized by Tencent or QQ Mail. It works through the standard
+IMAP/SMTP services that users enable themselves, and it is unrelated to the
+qmail ecosystem's qmailctl tool.
 
+--------------------------------------------------------------------------------
+Third-party software
+--------------------------------------------------------------------------------
+
+This product includes software developed by third parties, distributed under
+permissive licenses. A full machine-readable inventory is in
+docs/THIRD_PARTY_LICENSES.csv; the corresponding licenses are recorded in the
+upstream modules referenced by go.mod and go.sum. No dependency carries a
+copyleft (GPL/LGPL/AGPL/MPL) license.
+
+Components under the Apache License, Version 2.0, whose NOTICE terms this file
+carries forward:
+
+  - github.com/spf13/cobra                     Copyright the Cobra Authors
+  - github.com/santhosh-tekuri/jsonschema/v6   Copyright Santhosh Kumar Tekuri
+  - github.com/inconshreveable/mousetrap        Copyright Alan Shreve
+
+Other dependencies are distributed under the MIT, BSD-2-Clause, and
+BSD-3-Clause licenses (see docs/THIRD_PARTY_LICENSES.csv for the per-module
+breakdown).
