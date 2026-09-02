@@ -23,6 +23,23 @@ All notable development changes are recorded here. Formal releases remain owner-
 - Structured `failure_details` on export results so agents can tell retryable
   failures from permanent ones.
 
+### Fixed (2026-09-02, first real-mailbox cleanup run)
+
+- The clean gate batches server-truth checks per folder instead of per
+  message: a 2,823-message plan previously issued ~8,500 round trips (one
+  EXAMINE + one envelope fetch + one header fetch each), which tripped QQ's
+  connection-rate limiting and failed a large, drifting fraction of messages
+  with "folder examination failed". The gate now examines each folder once
+  and batch-fetches envelopes/headers in 500-UID chunks (~15 round trips).
+- A missing Message-ID is no longer treated as a failed identity comparison:
+  wild email legitimately lacks the header, so when the verified backup has
+  no Message-ID the message is gated on UIDVALIDITY+UID+RFC822.SIZE — but a
+  one-sided presence still rejects.
+- A refused clean batch now prints its failure reasons grouped on stderr, and
+  the gate emits a progress heartbeat every 250 messages (previously the
+  verification phase was silent for many minutes and a whole-batch refusal
+  came with no explanation).
+
 ### Fixed (2026-09-02, first real-mailbox triage run)
 
 - Bulk fetches no longer request server-parsed structure at all: a live QQ

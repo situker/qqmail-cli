@@ -2,6 +2,7 @@ package cleaner
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"testing"
 	"time"
@@ -26,7 +27,7 @@ func TestLiveGateProbeSample(t *testing.T) {
 		t.Fatal(err)
 	}
 	sample := plan
-	if len(sample.Items) > 40 {
+	if os.Getenv("QQMAILCTL_LIVE_GATE_FULL") != "1" && len(sample.Items) > 40 {
 		sample.Items = sample.Items[:40]
 	}
 	cfg, _, err := account.Load("")
@@ -62,5 +63,16 @@ func TestLiveGateProbeSample(t *testing.T) {
 	}
 	if len(result.Failures) > 0 {
 		t.Logf("first failing id: %s", result.Failures[0].ID)
+	}
+	if out := os.Getenv("QQMAILCTL_LIVE_GATE_ELIGIBLE_OUT"); out != "" {
+		ids := make([]string, 0, len(result.Eligible))
+		for _, e := range result.Eligible {
+			ids = append(ids, e.IDString)
+		}
+		payload, _ := json.Marshal(ids)
+		if err := os.WriteFile(out, payload, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		t.Logf("wrote %d eligible ids to %s", len(ids), out)
 	}
 }

@@ -55,92 +55,202 @@ func Verify(ctx context.Context, reader imapx.Reader, plan cleanupplan.Plan, nam
 		byID[entry.ID] = entry
 	}
 	result := GateResult{Eligible: []Eligible{}, Failures: []Failure{}, AlreadyGone: []Failure{}}
+
+	// Per-item outcome, filled in original plan order at the end. Local checks
+	// resolve immediately; server checks are batched per folder because a
+	// per-message EXAMINE would be thousands of round trips and trip QQ's
+	// connection-rate limits (live observation 2026-09-02).
+	type pending struct {
+		id    mailmodel.MsgID
+		entry exporter.Entry
+	}
+	outcomes := make([]*Failure, len(plan.Items)) // failure if set
+	gone := make([]bool, len(plan.Items))
+	eligible := make([]*Eligible, len(plan.Items))
+	needServer := map[string][]int{}
+	pendings := make([]pending, len(plan.Items))
 	seen := map[string]bool{}
+
+	fail := func(index int, gate, reason string) {
+		f := Failure{ID: plan.Items[index].ID, Gate: gate, Reason: reason}
+		outcomes[index] = &f
+	}
+
 	for index, item := range plan.Items {
-		if progress != nil {
-			progress(index+1, len(plan.Items))
-		}
 		if seen[item.ID] {
-			result.Failures = append(result.Failures, Failure{ID: item.ID, Gate: "local", Reason: "duplicate message ID in plan"})
+			fail(index, "local", "duplicate message ID in plan")
 			continue
 		}
 		seen[item.ID] = true
 		entry, ok := byID[item.ID]
 		if !ok {
-			result.Failures = append(result.Failures, Failure{ID: item.ID, Gate: "local", Reason: "message is absent from verified manifest"})
+			fail(index, "local", "message is absent from verified manifest")
 			continue
 		}
 		id, parseErr := mailmodel.ParseMsgID(item.ID)
 		if parseErr != nil || entry.UID != id.UID || entry.UIDValidity != id.UIDValidity || entry.FolderRaw != id.Folder {
-			result.Failures = append(result.Failures, Failure{ID: item.ID, Gate: "local", Reason: "plan ID and manifest identity disagree"})
+			fail(index, "local", "plan ID and manifest identity disagree")
 			continue
 		}
-		uidValidity, _, examineErr := reader.Examine(ctx, id.Folder)
+		pendings[index] = pending{id: id, entry: entry}
+		needServer[id.Folder] = append(needServer[id.Folder], index)
+	}
+
+	done := 0
+	for folder, indexes := range needServer {
+		uidValidity, _, examineErr := reader.Examine(ctx, folder)
 		if examineErr != nil {
-			result.Failures = append(result.Failures, Failure{ID: item.ID, Gate: "server", Reason: "folder examination failed"})
+			for _, index := range indexes {
+				fail(index, "server", "folder examination failed")
+			}
+			done += len(indexes)
+			if progress != nil {
+				progress(done, len(plan.Items))
+			}
 			continue
 		}
-		if uidValidity != entry.UIDValidity {
-			result.Failures = append(result.Failures, Failure{ID: item.ID, Gate: "server", Reason: "UIDVALIDITY changed"})
+		uids := make([]uint32, 0, len(indexes))
+		for _, index := range indexes {
+			uids = append(uids, pendings[index].id.UID)
+		}
+		envByUID, envErr := fetchEnvelopesByUID(ctx, reader, folder, uidValidity, uids)
+		if envErr != nil {
+			for _, index := range indexes {
+				fail(index, "server", "server envelope fetch failed")
+			}
+			done += len(indexes)
+			if progress != nil {
+				progress(done, len(plan.Items))
+			}
 			continue
 		}
-		envelopes, fetchErr := reader.FetchEnvelopes(ctx, id.Folder, uidValidity, []uint32{id.UID})
-		if fetchErr != nil {
-			result.Failures = append(result.Failures, Failure{ID: item.ID, Gate: "server", Reason: "server envelope fetch failed"})
-			continue
-		}
-		if len(envelopes) == 0 {
-			// Absent on the server but fully backed up locally (the manifest
-			// gate already passed): typically a re-run of a partially executed
-			// plan, or the message was moved/deleted elsewhere.
-			result.AlreadyGone = append(result.AlreadyGone, Failure{ID: item.ID, Gate: "server", Reason: "message no longer exists on the server; verified local backup is present"})
-			continue
-		}
-		if len(envelopes) != 1 || envelopes[0].Size != entry.Size {
-			result.Failures = append(result.Failures, Failure{ID: item.ID, Gate: "server", Reason: "RFC822.SIZE does not match verified backup"})
-			continue
-		}
-		if hasServerFlag(envelopes[0].Flags, `\Flagged`) {
-			result.Failures = append(result.Failures, Failure{ID: item.ID, Gate: "server", Reason: "message is flagged (starred) on the server; flagged mail is protected from cleanup"})
-			continue
-		}
-		headers, headerErr := reader.FetchHeaderFields(ctx, []uint32{id.UID})
+		headerByUID, headerErr := fetchHeadersByUID(ctx, reader, uids)
 		if headerErr != nil {
-			result.Failures = append(result.Failures, Failure{ID: item.ID, Gate: "server", Reason: "server header fetch failed"})
-			continue
-		}
-		if len(headers) != 1 {
-			result.Failures = append(result.Failures, Failure{ID: item.ID, Gate: "server", Reason: "server header fetch returned unexpected count"})
-			continue
-		}
-		// Message-ID is one of three server-truth dimensions, and wild email
-		// legitimately lacks the header. A missing dimension is not a failed
-		// comparison: when the verified backup has no Message-ID, the message
-		// passes on UIDVALIDITY+UID+RFC822.SIZE — but only if the server side
-		// has none either. Any one-sided presence still rejects.
-		if normalizeMessageID(headers[0].MessageID) != normalizeMessageID(entry.MessageID) {
-			reason := "Message-ID does not match verified backup"
-			if strings.TrimSpace(entry.MessageID) == "" {
-				reason = "server reports a Message-ID but the verified backup has none"
+			for _, index := range indexes {
+				fail(index, "server", "server header fetch failed")
 			}
-			result.Failures = append(result.Failures, Failure{ID: item.ID, Gate: "server", Reason: reason})
+			done += len(indexes)
+			if progress != nil {
+				progress(done, len(plan.Items))
+			}
 			continue
 		}
-		if paranoid {
-			raw, truncated, bodyErr := reader.FetchBodyPeek(ctx, id, imapx.MaxMessageBytes)
-			if bodyErr != nil || truncated {
-				result.Failures = append(result.Failures, Failure{ID: item.ID, Gate: "paranoid", Reason: "full message refetch failed or was truncated"})
+		for _, index := range indexes {
+			p := pendings[index]
+			done++
+			if progress != nil {
+				progress(done, len(plan.Items))
+			}
+			if uidValidity != p.entry.UIDValidity {
+				fail(index, "server", "UIDVALIDITY changed")
 				continue
 			}
-			digest := sha256.Sum256(raw)
-			if !strings.EqualFold(hex.EncodeToString(digest[:]), entry.SHA256) {
-				result.Failures = append(result.Failures, Failure{ID: item.ID, Gate: "paranoid", Reason: "server body SHA-256 does not match verified backup"})
+			envelope, present := envByUID[p.id.UID]
+			if !present {
+				// Absent on the server but fully backed up locally (the manifest
+				// gate passed): typically a re-run of a partially executed plan,
+				// or the message was moved/deleted elsewhere.
+				gone[index] = true
 				continue
 			}
+			if envelope.Size != p.entry.Size {
+				fail(index, "server", "RFC822.SIZE does not match verified backup")
+				continue
+			}
+			if hasServerFlag(envelope.Flags, `\Flagged`) {
+				fail(index, "server", "message is flagged (starred) on the server; flagged mail is protected from cleanup")
+				continue
+			}
+			header, hasHeader := headerByUID[p.id.UID]
+			if !hasHeader {
+				fail(index, "server", "server header fetch returned unexpected count")
+				continue
+			}
+			// Message-ID is one of three server-truth dimensions, and wild
+			// email legitimately lacks the header. A missing dimension is not
+			// a failed comparison: with no Message-ID in the verified backup,
+			// the message passes on UIDVALIDITY+UID+RFC822.SIZE — but only if
+			// the server side has none either. Any one-sided presence rejects.
+			if normalizeMessageID(header.MessageID) != normalizeMessageID(p.entry.MessageID) {
+				reason := "Message-ID does not match verified backup"
+				if strings.TrimSpace(p.entry.MessageID) == "" {
+					reason = "server reports a Message-ID but the verified backup has none"
+				}
+				fail(index, "server", reason)
+				continue
+			}
+			if paranoid {
+				raw, truncated, bodyErr := reader.FetchBodyPeek(ctx, p.id, imapx.MaxMessageBytes)
+				if bodyErr != nil || truncated {
+					fail(index, "paranoid", "full message refetch failed or was truncated")
+					continue
+				}
+				digest := sha256.Sum256(raw)
+				if !strings.EqualFold(hex.EncodeToString(digest[:]), p.entry.SHA256) {
+					fail(index, "paranoid", "server body SHA-256 does not match verified backup")
+					continue
+				}
+			}
+			eligible[index] = &Eligible{ID: p.id, IDString: plan.Items[index].ID, Identity: imapx.MessageIdentity{MessageID: p.entry.MessageID, SizeBytes: p.entry.Size}}
 		}
-		result.Eligible = append(result.Eligible, Eligible{ID: id, IDString: item.ID, Identity: imapx.MessageIdentity{MessageID: entry.MessageID, SizeBytes: entry.Size}})
+	}
+
+	for index := range plan.Items {
+		switch {
+		case outcomes[index] != nil:
+			result.Failures = append(result.Failures, *outcomes[index])
+		case gone[index]:
+			result.AlreadyGone = append(result.AlreadyGone, Failure{ID: plan.Items[index].ID, Gate: "server", Reason: "message no longer exists on the server; verified local backup is present"})
+		case eligible[index] != nil:
+			result.Eligible = append(result.Eligible, *eligible[index])
+		}
 	}
 	return result, nil
+}
+
+// fetchEnvelopesByUID batches envelope fetches in bounded chunks (a single
+// FETCH with thousands of UIDs risks server limits) and returns them keyed by
+// UID. A missing UID means the message is no longer on the server.
+func fetchEnvelopesByUID(ctx context.Context, reader imapx.Reader, folder string, uidValidity uint32, uids []uint32) (map[uint32]mailmodel.Envelope, error) {
+	byUID := make(map[uint32]mailmodel.Envelope, len(uids))
+	for _, chunk := range chunkUIDs(uids, gateFetchChunk) {
+		envelopes, err := reader.FetchEnvelopes(ctx, folder, uidValidity, chunk)
+		if err != nil {
+			return nil, err
+		}
+		for _, envelope := range envelopes {
+			byUID[envelope.UID] = envelope
+		}
+	}
+	return byUID, nil
+}
+
+func fetchHeadersByUID(ctx context.Context, reader imapx.Reader, uids []uint32) (map[uint32]mailmodel.HeaderFields, error) {
+	byUID := make(map[uint32]mailmodel.HeaderFields, len(uids))
+	for _, chunk := range chunkUIDs(uids, gateFetchChunk) {
+		headers, err := reader.FetchHeaderFields(ctx, chunk)
+		if err != nil {
+			return nil, err
+		}
+		for _, header := range headers {
+			byUID[header.UID] = header
+		}
+	}
+	return byUID, nil
+}
+
+const gateFetchChunk = 500
+
+func chunkUIDs(uids []uint32, size int) [][]uint32 {
+	var chunks [][]uint32
+	for start := 0; start < len(uids); start += size {
+		end := start + size
+		if end > len(uids) {
+			end = len(uids)
+		}
+		chunks = append(chunks, uids[start:end])
+	}
+	return chunks
 }
 
 func TrashFolder(ctx context.Context, reader imapx.Reader) (string, error) {
