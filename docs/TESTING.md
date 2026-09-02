@@ -34,7 +34,7 @@ pwsh -File .\scripts\check-docs.ps1
 - `go vet` 无错误。
 - golangci-lint 输出 `0 issues.`。
 - govulncheck 输出 `No vulnerabilities found.`。
-- 文档检查输出 `qqmailctl documentation checks passed`。
+- 文档检查输出 `qqmail-cli documentation checks passed`。
 
 本轮测试覆盖 schema 契约、readonly 命令面、写调用静态边界、无裸 EXPUNGE 线缆守卫、MIME、白名单、审计脱敏和 panic 脱敏。
 
@@ -42,8 +42,8 @@ pwsh -File .\scripts\check-docs.ps1
 
 ```powershell
 $env:CGO_ENABLED = '0'
-go build -o .\bin\qqmailctl.exe .\cmd\qqmailctl
-.\bin\qqmailctl.exe version --json
+go build -o .\bin\qqmail-cli.exe .\cmd\qqmail-cli
+.\bin\qqmail-cli.exe version --json
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\smoke-ps51.ps1
 ```
 
@@ -51,7 +51,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\smoke-ps51.ps1
 
 - `version --json` 的 `data.version` 为预期开发或发布版本。
 - `schema_version` 为 `"1"`。
-- smoke 输出 `qqmailctl PowerShell smoke test passed`。
+- smoke 输出 `qqmail-cli PowerShell smoke test passed`。
 - `agent-info` 包含 `read`、`mutate`、`destructive`、`send` 四种风险。
 
 ## C. P0 六平台 snapshot
@@ -99,15 +99,15 @@ git tag --list
 $utf8 = New-Object System.Text.UTF8Encoding($false)
 [Console]::OutputEncoding = $utf8
 $OutputEncoding = $utf8
-$env:QQMAILCTL_READONLY = '1'
+$env:QQMAIL_CLI_READONLY = '1'
 ```
 
 ### E1. 本地状态与连接
 
 ```powershell
-.\bin\qqmailctl.exe auth status --json | ConvertFrom-Json | Out-Null
-.\bin\qqmailctl.exe doctor --json | ConvertFrom-Json | Out-Null
-.\bin\qqmailctl.exe folder list --json | ConvertFrom-Json | Out-Null
+.\bin\qqmail-cli.exe auth status --json | ConvertFrom-Json | Out-Null
+.\bin\qqmail-cli.exe doctor --json | ConvertFrom-Json | Out-Null
+.\bin\qqmail-cli.exe folder list --json | ConvertFrom-Json | Out-Null
 ```
 
 通过标准：三个命令退出码均为 0，stdout 均能解析为 JSON。
@@ -115,12 +115,12 @@ $env:QQMAILCTL_READONLY = '1'
 ### E2. 未读状态保持
 
 ```powershell
-$before = .\bin\qqmailctl.exe envelope list --folder INBOX --unread --limit 20 --json | ConvertFrom-Json
+$before = .\bin\qqmail-cli.exe envelope list --folder INBOX --unread --limit 20 --json | ConvertFrom-Json
 $target = $before.data.envelopes | Select-Object -First 1
 if (-not $target) { throw '没有可用于 PEEK 验证的未读邮件' }
 
-.\bin\qqmailctl.exe message show $target.id --part text --json | ConvertFrom-Json | Out-Null
-$after = .\bin\qqmailctl.exe envelope list --folder INBOX --unread --limit 20 --json | ConvertFrom-Json
+.\bin\qqmail-cli.exe message show $target.id --part text --json | ConvertFrom-Json | Out-Null
+$after = .\bin\qqmail-cli.exe envelope list --folder INBOX --unread --limit 20 --json | ConvertFrom-Json
 if ($after.data.envelopes.id -notcontains $target.id) { throw '目标邮件不再处于未读列表' }
 ```
 
@@ -131,8 +131,8 @@ if ($after.data.envelopes.id -notcontains $target.id) { throw '目标邮件不�
 对一封确认含附件的测试邮件运行：
 
 ```powershell
-.\bin\qqmailctl.exe attachment list $attachmentMessageId --json | ConvertFrom-Json | Out-Null
-.\bin\qqmailctl.exe watch --folder INBOX --jsonl --once
+.\bin\qqmail-cli.exe attachment list $attachmentMessageId --json | ConvertFrom-Json | Out-Null
+.\bin\qqmail-cli.exe watch --folder INBOX --jsonl --once
 ```
 
 附件下载不是纯读本地操作；只有确实需要验证文件写入时才临时关闭 readonly，并使用独立临时目录。
@@ -142,12 +142,12 @@ if ($after.data.envelopes.id -notcontains $target.id) { throw '目标邮件不�
 `sync` 会写本地 SQLite，但不会修改服务器。人工确认本地缓存位置后运行：
 
 ```powershell
-Remove-Item Env:QQMAILCTL_READONLY -ErrorAction SilentlyContinue
-.\bin\qqmailctl.exe sync --json | ConvertFrom-Json | Out-Null
-.\bin\qqmailctl.exe search "测试" --local --limit 20 --json | ConvertFrom-Json | Out-Null
-.\bin\qqmailctl.exe triage analyze --json | ConvertFrom-Json | Out-Null
-.\bin\qqmailctl.exe triage plan --output .\test-plan.json --markdown .\test-plan.md --json | ConvertFrom-Json | Out-Null
-.\bin\qqmailctl.exe cache inspect --json | ConvertFrom-Json | Out-Null
+Remove-Item Env:QQMAIL_CLI_READONLY -ErrorAction SilentlyContinue
+.\bin\qqmail-cli.exe sync --json | ConvertFrom-Json | Out-Null
+.\bin\qqmail-cli.exe search "测试" --local --limit 20 --json | ConvertFrom-Json | Out-Null
+.\bin\qqmail-cli.exe triage analyze --json | ConvertFrom-Json | Out-Null
+.\bin\qqmail-cli.exe triage plan --output .\test-plan.json --markdown .\test-plan.md --json | ConvertFrom-Json | Out-Null
+.\bin\qqmail-cli.exe cache inspect --json | ConvertFrom-Json | Out-Null
 ```
 
 通过标准：
@@ -165,7 +165,7 @@ Remove-Item Env:QQMAILCTL_READONLY -ErrorAction SilentlyContinue
 真实 SMTP 不在本节发生：
 
 ```powershell
-.\bin\qqmailctl.exe send --to owner-approved@example.com --subject "qqmailctl dry-run" --body "No message should be sent." --json | ConvertFrom-Json | Out-Null
+.\bin\qqmail-cli.exe send --to owner-approved@example.com --subject "qqmail-cli dry-run" --body "No message should be sent." --json | ConvertFrom-Json | Out-Null
 ```
 
 通过标准：
@@ -184,8 +184,8 @@ P1 不阻塞本地代码质量门，但在声称“真实写路径已验证”�
 ### H1. 双重门
 
 ```powershell
-$env:QQMAILCTL_E2E_WRITE = '1'
-$env:QQMAILCTL_DEDICATED_TEST_ACCOUNT = '1'
+$env:QQMAIL_CLI_E2E_WRITE = '1'
+$env:QQMAIL_CLI_DEDICATED_TEST_ACCOUNT = '1'
 ```
 
 依次运行 spike 探针的写阶段（频控 S4、写路径 S5、发送配额 S9、中文夹写 S11）；网页收取选项快照与新 IP 登录验证需要人工网页设置或另一台主机。
@@ -193,7 +193,7 @@ $env:QQMAILCTL_DEDICATED_TEST_ACCOUNT = '1'
 ### H2. 真实发送
 
 - 白名单只允许专用邮箱自己的地址。
-- `QQMAILCTL_TEST_RECIPIENT` 必须与默认专用账号完全相同。
+- `QQMAIL_CLI_TEST_RECIPIENT` 必须与默认专用账号完全相同。
 - 先 dry-run，再由人类在 TTY 中逐封键入 `SEND`。
 - 首次错误立即停止，不重试。
 
@@ -207,10 +207,10 @@ $env:QQMAILCTL_DEDICATED_TEST_ACCOUNT = '1'
 完成后清理环境变量：
 
 ```powershell
-Remove-Item Env:QQMAILCTL_E2E_WRITE -ErrorAction SilentlyContinue
-Remove-Item Env:QQMAILCTL_DEDICATED_TEST_ACCOUNT -ErrorAction SilentlyContinue
-Remove-Item Env:QQMAILCTL_TEST_RECIPIENT -ErrorAction SilentlyContinue
-$env:QQMAILCTL_READONLY = '1'
+Remove-Item Env:QQMAIL_CLI_E2E_WRITE -ErrorAction SilentlyContinue
+Remove-Item Env:QQMAIL_CLI_DEDICATED_TEST_ACCOUNT -ErrorAction SilentlyContinue
+Remove-Item Env:QQMAIL_CLI_TEST_RECIPIENT -ErrorAction SilentlyContinue
+$env:QQMAIL_CLI_READONLY = '1'
 ```
 
 ## 验收记录

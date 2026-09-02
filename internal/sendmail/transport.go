@@ -12,8 +12,8 @@ import (
 
 	"github.com/emersion/go-sasl"
 	smtp "github.com/emersion/go-smtp"
-	"github.com/situker/qqmailctl/internal/account"
-	"github.com/situker/qqmailctl/internal/errmap"
+	"github.com/situker/qqmail-cli/internal/account"
+	"github.com/situker/qqmail-cli/internal/errmap"
 )
 
 const (

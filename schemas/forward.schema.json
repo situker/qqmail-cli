@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/situker/qqmailctl/schemas/forward.schema.json",
+  "$id": "https://github.com/situker/qqmail-cli/schemas/forward.schema.json",
   "allOf": [
     {"$ref": "envelope-common.schema.json"},
     {"properties": {"command": {"const": "forward"}, "data": {"$ref": "send.schema.json#/$defs/sendResult"}}}

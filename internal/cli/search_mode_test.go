@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/situker/qqmailctl/internal/imapx"
-	"github.com/situker/qqmailctl/internal/mailmodel"
+	"github.com/situker/qqmail-cli/internal/imapx"
+	"github.com/situker/qqmail-cli/internal/mailmodel"
 )
 
 type searchModeReader struct {

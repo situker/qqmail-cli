@@ -1,6 +1,6 @@
-# Contributing to qqmailctl
+# Contributing to qqmail-cli
 
-感谢参与 qqmailctl。这个项目首先保护邮箱凭证和用户数据，其次才是功能扩展速度。
+感谢参与 qqmail-cli。这个项目首先保护邮箱凭证和用户数据，其次才是功能扩展速度。
 
 ## 开始前
 
@@ -17,14 +17,14 @@ go test ./...
 go vet ./...
 golangci-lint run
 govulncheck ./...
-go build ./cmd/qqmailctl
+go build ./cmd/qqmail-cli
 pwsh -File ./scripts/check-docs.ps1
 ```
 
 Windows 还应运行：
 
 ```powershell
-go build -o .\bin\qqmailctl.exe .\cmd\qqmailctl
+go build -o .\bin\qqmail-cli.exe .\cmd\qqmail-cli
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\smoke-ps51.ps1
 ```
 
@@ -36,7 +36,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\smoke-ps51.ps1
 - go-imap 写方法只能出现在 `internal/imapx/mutate.go`，且只能经 `internal/policy` 调用。
 - 不得增加裸 `EXPUNGE`、永久删除命令、确认绕过 flag 或隐式发送。
 - 读路径继续使用 `EXAMINE` 与 `BODY.PEEK`。
-- 新写命令必须先检查 `QQMAILCTL_READONLY`，默认 dry-run，需要合理的 TTY 确认并写 SQLite + JSONL audit。
+- 新写命令必须先检查 `QQMAIL_CLI_READONLY`，默认 dry-run，需要合理的 TTY 确认并写 SQLite + JSONL audit。
 - 邮件派生字段必须标为 untrusted；人读渲染需要控制符、ANSI、bidi 和 Markdown 防护。
 - CLI 本体不调用 AI 模型。
 
@@ -61,7 +61,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\smoke-ps51.ps1
 - 授权码不得进入参数、日志、fixture、快照、CI、Issue 或 PR。
 - 普通 CI 不连接真实 QQ 邮箱。
 - 真实只读测试必须显式设置 E2E 开关并使用专用账号。
-- 真实写测试需要 `QQMAILCTL_E2E_WRITE=1` 与 `QQMAILCTL_DEDICATED_TEST_ACCOUNT=1`，且只能操作探针自己制造的邮件和文件夹。
+- 真实写测试需要 `QQMAIL_CLI_E2E_WRITE=1` 与 `QQMAIL_CLI_DEDICATED_TEST_ACCOUNT=1`，且只能操作探针自己制造的邮件和文件夹。
 - 任何限流或认证失败出现后停止，不自动重试。
 - 提交的兼容性结论必须脱敏、带绝对日期并写成“实测观察”，不能写成服务商保证。
 

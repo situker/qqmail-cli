@@ -24,7 +24,7 @@ func probeS10(result *result) error {
 	if err != nil || code != 220 {
 		return fmt.Errorf("unexpected SMTP greeting status %d: %w", code, err)
 	}
-	if _, err := writer.WriteString("EHLO qqmailctl.invalid\r\n"); err != nil {
+	if _, err := writer.WriteString("EHLO qqmail-cli.invalid\r\n"); err != nil {
 		return err
 	}
 	if err := writer.Flush(); err != nil {
@@ -56,7 +56,7 @@ func probeS10(result *result) error {
 	state := tlsConn.ConnectionState()
 	reader = bufio.NewReader(tlsConn)
 	writer = bufio.NewWriter(tlsConn)
-	if _, err := writer.WriteString("EHLO qqmailctl.invalid\r\n"); err != nil {
+	if _, err := writer.WriteString("EHLO qqmail-cli.invalid\r\n"); err != nil {
 		return err
 	}
 	if err := writer.Flush(); err != nil {

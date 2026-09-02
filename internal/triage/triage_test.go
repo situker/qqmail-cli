@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/situker/qqmailctl/internal/index"
+	"github.com/situker/qqmail-cli/internal/index"
 )
 
 func permissiveOptions() Options {

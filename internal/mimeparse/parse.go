@@ -13,7 +13,7 @@ import (
 	messagemail "github.com/emersion/go-message/mail"
 	enmime "github.com/jhillyerd/enmime/v2"
 	"github.com/microcosm-cc/bluemonday"
-	"github.com/situker/qqmailctl/internal/mailmodel"
+	"github.com/situker/qqmail-cli/internal/mailmodel"
 	"golang.org/x/net/html"
 )
 

@@ -16,9 +16,9 @@ import (
 	imap "github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/imapclient"
 	"github.com/emersion/go-message/charset"
-	"github.com/situker/qqmailctl/internal/account"
-	"github.com/situker/qqmailctl/internal/errmap"
-	"github.com/situker/qqmailctl/internal/mailmodel"
+	"github.com/situker/qqmail-cli/internal/account"
+	"github.com/situker/qqmail-cli/internal/errmap"
+	"github.com/situker/qqmail-cli/internal/mailmodel"
 )
 
 const (
@@ -143,7 +143,7 @@ func dialWithVersion(ctx context.Context, cfg account.Named, authCode string, tl
 			return nil, err
 		}
 		stopID := client.watchdog(ctx)
-		_, err := client.raw.ID(&imap.IDData{Name: "qqmailctl", Version: version}).Wait()
+		_, err := client.raw.ID(&imap.IDData{Name: "qqmail-cli", Version: version}).Wait()
 		stopID()
 		if err != nil {
 			client.close()
@@ -514,13 +514,3 @@ func capStrings(caps imap.CapSet) []string {
 	return result
 }
 
-func addresses(values []imap.Address) []mailmodel.Address {
-	result := make([]mailmodel.Address, 0, len(values))
-	for _, value := range values {
-		if value.IsGroupStart() || value.IsGroupEnd() {
-			continue
-		}
-		result = append(result, mailmodel.Address{Name: mailmodel.DecodeHeaderText(value.Name), Email: value.Addr()})
-	}
-	return result
-}

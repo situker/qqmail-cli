@@ -6,15 +6,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/situker/qqmailctl/internal/account"
-	"github.com/situker/qqmailctl/internal/secrets"
+	"github.com/situker/qqmail-cli/internal/account"
+	"github.com/situker/qqmail-cli/internal/secrets"
 )
 
 // Manual live probe: prints current message counts for the mailbox folders
-// (counts only — no content). Gated on QQMAILCTL_LIVE_PROBE=1.
+// (counts only — no content). Gated on QQMAIL_CLI_LIVE_PROBE=1.
 func TestLiveFolderCounts(t *testing.T) {
-	if os.Getenv("QQMAILCTL_LIVE_PROBE") != "1" {
-		t.Skip("set QQMAILCTL_LIVE_PROBE=1 to run against the configured real account")
+	if os.Getenv("QQMAIL_CLI_LIVE_PROBE") != "1" {
+		t.Skip("set QQMAIL_CLI_LIVE_PROBE=1 to run against the configured real account")
 	}
 	cfg, _, err := account.Load("")
 	if err != nil {

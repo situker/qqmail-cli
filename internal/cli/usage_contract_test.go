@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/situker/qqmailctl/internal/errmap"
-	"github.com/situker/qqmailctl/internal/output"
+	"github.com/situker/qqmail-cli/internal/errmap"
+	"github.com/situker/qqmail-cli/internal/output"
 )
 
 // Every cobra-level usage failure must classify as usage/exit 2 and must not
@@ -52,7 +52,7 @@ func TestArgsRequestJSONDetection(t *testing.T) {
 func TestUnknownServerErrorNoLongerGuessesAuth(t *testing.T) {
 	// A cobra-style unknown-command error containing the word "login" must be
 	// usage, never auth_failed with a misleading authorization-code hint.
-	err := errmap.Classify(strings2error(`unknown command "login" for "qqmailctl"`))
+	err := errmap.Classify(strings2error(`unknown command "login" for "qqmail-cli"`))
 	if err.Kind != errmap.Usage {
 		t.Fatalf("kind=%s, want usage", err.Kind)
 	}

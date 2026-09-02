@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/pelletier/go-toml/v2"
-	"github.com/situker/qqmailctl/internal/errmap"
+	"github.com/situker/qqmail-cli/internal/errmap"
 )
 
 const ConfigSchema = 1
@@ -76,7 +76,7 @@ func DefaultPath() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(base, "qqmailctl", "config.toml"), nil
+	return filepath.Join(base, "qqmail-cli", "config.toml"), nil
 }
 
 func Load(path string) (*Config, string, error) {
@@ -184,7 +184,7 @@ func (c *Config) Resolve(name string) (Named, error) {
 	}
 	value, ok := c.Accounts[name]
 	if !ok || name == "" {
-		return Named{}, &errmap.Error{Kind: errmap.Config, Message: "尚未配置账号", Suggestion: "先运行 qqmailctl auth login"}
+		return Named{}, &errmap.Error{Kind: errmap.Config, Message: "尚未配置账号", Suggestion: "先运行 qqmail-cli auth login"}
 	}
 	smtpHost := value.SMTPHost
 	if smtpHost == "" {

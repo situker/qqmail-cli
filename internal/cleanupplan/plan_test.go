@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/situker/qqmailctl/internal/mailmodel"
+	"github.com/situker/qqmail-cli/internal/mailmodel"
 )
 
 func TestSaveLoadValidatesEmbeddedSchema(t *testing.T) {

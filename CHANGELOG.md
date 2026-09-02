@@ -65,7 +65,7 @@ All notable development changes are recorded here. Formal releases remain owner-
 
 - Every cobra usage failure now returns the JSON contract (usage/exit 2):
   unknown subcommands no longer print help to stdout with exit 0, a bare
-  `qqmailctl login` is no longer misclassified as an authentication failure,
+  `qqmail-cli login` is no longer misclassified as an authentication failure,
   and `meta.duration_ms` can no longer be garbage.
 - Watch/sync no longer re-announce the newest message on every poll (RFC 3501
   `N:*` always matches the highest UID; the window filter now drops it).
@@ -76,7 +76,7 @@ All notable development changes are recorded here. Formal releases remain owner-
 - Expunge guards now also ban `UIDExpunge` and `UnselectAndExpunge` (CLOSE)
   and scan the whole imapx tree; the readonly blocking matrix asserts the
   rejection actually came from the readonly gate.
-- `QQMAILCTL_READONLY` fails closed on unrecognized values; `doctor` reports
+- `QQMAIL_CLI_READONLY` fails closed on unrecognized values; `doctor` reports
   the live readonly state; text-mode partial results exit 70.
 - Sync fetches in ascending 500-message batches with per-batch watermark
   commits, so a huge first sync survives timeouts and resumes.
@@ -99,7 +99,7 @@ All notable development changes are recorded here. Formal releases remain owner-
 - Deterministic `triage analyze`/`triage plan` commands, bounded TOML extension rules, schema-validated plan files, and sanitized Markdown review output.
 - `backup --plan`, which exports and verifies every planned message before recording the backup root in the plan.
 - Three-gate `clean`, dry-run-first `message mark-read`/`message move`, polling `watch --jsonl`, cache inspection/whole-file clearing, and dual SQLite/JSONL audit logs.
-- Runtime `QQMAILCTL_READONLY` enforcement and agent-info risk levels for read, mutate, and destructive commands.
+- Runtime `QQMAIL_CLI_READONLY` enforcement and agent-info risk levels for read, mutate, and destructive commands.
 - Dry-run-first `send`, `reply`, and `forward` with RFC-compliant UTF-8 MIME, allowlisted recipients, real-TTY `SEND` confirmation, content-free audit, and 465 TLS / 587 STARTTLS transport.
 - Embedded schemas and a `send` agent risk level for the complete v0.3 command surface.
 - v0.3 sending documentation, upgraded Agent skill, and an owner handoff checklist for gated probes and publishing.

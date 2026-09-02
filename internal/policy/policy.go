@@ -6,15 +6,15 @@ import (
 	"os"
 	"strings"
 
-	"github.com/situker/qqmailctl/internal/account"
-	"github.com/situker/qqmailctl/internal/errmap"
-	"github.com/situker/qqmailctl/internal/imapx"
-	"github.com/situker/qqmailctl/internal/index"
-	"github.com/situker/qqmailctl/internal/mailmodel"
-	"github.com/situker/qqmailctl/internal/sendmail"
+	"github.com/situker/qqmail-cli/internal/account"
+	"github.com/situker/qqmail-cli/internal/errmap"
+	"github.com/situker/qqmail-cli/internal/imapx"
+	"github.com/situker/qqmail-cli/internal/index"
+	"github.com/situker/qqmail-cli/internal/mailmodel"
+	"github.com/situker/qqmail-cli/internal/sendmail"
 )
 
-const ReadonlyEnv = "QQMAILCTL_READONLY"
+const ReadonlyEnv = "QQMAIL_CLI_READONLY"
 
 type Service struct {
 	writer imapx.Mutator
@@ -58,7 +58,7 @@ func New(writer imapx.Mutator, audit *index.DB) *Service {
 }
 
 // Readonly fails closed: any value that is not an explicit falsy token counts
-// as readonly. A user who set QQMAILCTL_READONLY=enabled (or misspelled a
+// as readonly. A user who set QQMAIL_CLI_READONLY=enabled (or misspelled a
 // truthy value) clearly wanted protection — silently disabling it would be the
 // dangerous direction.
 func Readonly() bool {
@@ -73,7 +73,7 @@ func Readonly() bool {
 
 func RequireMutationAllowed() error {
 	if Readonly() {
-		return &errmap.Error{Kind: errmap.PolicyDenied, Message: "QQMAILCTL_READONLY 已启用，拒绝所有写操作", Suggestion: "仅在人工在场并确认风险后，于该次命令环境中关闭只读开关"}
+		return &errmap.Error{Kind: errmap.PolicyDenied, Message: "QQMAIL_CLI_READONLY 已启用，拒绝所有写操作", Suggestion: "仅在人工在场并确认风险后，于该次命令环境中关闭只读开关"}
 	}
 	return nil
 }

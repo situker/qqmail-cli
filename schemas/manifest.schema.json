@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/situker/qqmailctl/schemas/manifest.schema.json",
-  "title": "qqmailctl export manifest",
+  "$id": "https://github.com/situker/qqmail-cli/schemas/manifest.schema.json",
+  "title": "qqmail-cli export manifest",
   "type": "object",
   "required": ["account", "exported_at", "tool_version", "schema", "messages", "hmac"],
   "properties": {

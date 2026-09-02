@@ -5,14 +5,14 @@ import (
 	"os"
 	"strings"
 
-	"github.com/situker/qqmailctl/internal/errmap"
-	"github.com/situker/qqmailctl/internal/output"
+	"github.com/situker/qqmail-cli/internal/errmap"
+	"github.com/situker/qqmail-cli/internal/output"
 	keyring "github.com/zalando/go-keyring"
 )
 
 const (
-	ServiceName = "qqmailctl"
-	EnvName     = "QQMAILCTL_AUTH_CODE"
+	ServiceName = "qqmail-cli"
+	EnvName     = "QQMAIL_CLI_AUTH_CODE"
 )
 
 type Provider interface {
@@ -27,7 +27,7 @@ type Keyring struct{}
 func (Keyring) Get(account string) (string, error) {
 	value, err := keyring.Get(ServiceName, account)
 	if errors.Is(err, keyring.ErrNotFound) {
-		return "", &errmap.Error{Kind: errmap.AuthCodeMissing, Message: "系统凭据管理器中没有此账号的授权码", Suggestion: "重新运行 qqmailctl auth login"}
+		return "", &errmap.Error{Kind: errmap.AuthCodeMissing, Message: "系统凭据管理器中没有此账号的授权码", Suggestion: "重新运行 qqmail-cli auth login"}
 	}
 	if err != nil {
 		return "", &errmap.Error{Kind: errmap.Config, Message: "无法访问系统凭据管理器", Suggestion: "无头环境可显式使用 --auth-code-env", Cause: err}

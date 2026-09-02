@@ -8,11 +8,11 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/situker/qqmailctl/internal/account"
-	"github.com/situker/qqmailctl/internal/errmap"
-	"github.com/situker/qqmailctl/internal/output"
-	"github.com/situker/qqmailctl/internal/policy"
-	"github.com/situker/qqmailctl/internal/secrets"
+	"github.com/situker/qqmail-cli/internal/account"
+	"github.com/situker/qqmail-cli/internal/errmap"
+	"github.com/situker/qqmail-cli/internal/output"
+	"github.com/situker/qqmail-cli/internal/policy"
+	"github.com/situker/qqmail-cli/internal/secrets"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 )

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/situker/qqmailctl/internal/account"
-	"github.com/situker/qqmailctl/internal/policy"
+	"github.com/situker/qqmail-cli/internal/account"
+	"github.com/situker/qqmail-cli/internal/policy"
 	"github.com/spf13/cobra"
 )
 

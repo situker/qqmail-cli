@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/situker/qqmailctl/internal/errmap"
-	"github.com/situker/qqmailctl/internal/output"
-	"github.com/situker/qqmailctl/internal/policy"
-	"github.com/situker/qqmailctl/internal/syncer"
+	"github.com/situker/qqmail-cli/internal/errmap"
+	"github.com/situker/qqmail-cli/internal/output"
+	"github.com/situker/qqmail-cli/internal/policy"
+	"github.com/situker/qqmail-cli/internal/syncer"
 	"github.com/spf13/cobra"
 )
 

@@ -1,6 +1,6 @@
 # QQ Mail spikes
 
-S1 through S11 have rerunnable PowerShell entry points in this directory and a cross-platform Go core at `spikes/qqprobe`. The Go core reads the selected account from the normal qqmailctl configuration and gets its authorization code from the OS keyring. No credential flag or result field exists.
+S1 through S11 have rerunnable PowerShell entry points in this directory and a cross-platform Go core at `spikes/qqprobe`. The Go core reads the selected account from the normal qqmail-cli configuration and gets its authorization code from the OS keyring. No credential flag or result field exists.
 
 Results default to `spikes/results/`, which Git ignores. Review them locally, then write only redacted conclusions under `docs/compat/qq-YYYYMMDD*.md`. Never commit account addresses, authorization codes, message bodies, subjects, folder names, message IDs, or unredacted protocol logs. Label observations `实测兼容（YYYY-MM-DD）`, never as provider guarantees.
 
@@ -18,4 +18,4 @@ Results default to `spikes/results/`, which Git ignores. Review them locally, th
 | S10 | `s10-smtp-starttls.ps1` | Unauthenticated STARTTLS transport observation |
 | S11 | `s11-chinese-folder.ps1` | Gated create/rename/delete of one probe-created folder |
 
-Write/rate probes require both `QQMAILCTL_E2E_WRITE=1` and `QQMAILCTL_DEDICATED_TEST_ACCOUNT=1`. S9 additionally requires `QQMAILCTL_TEST_RECIPIENT` to exactly equal the configured default account. These gates do not authorize touching pre-existing mail or folders.
+Write/rate probes require both `QQMAIL_CLI_E2E_WRITE=1` and `QQMAIL_CLI_DEDICATED_TEST_ACCOUNT=1`. S9 additionally requires `QQMAIL_CLI_TEST_RECIPIENT` to exactly equal the configured default account. These gates do not authorize touching pre-existing mail or folders.

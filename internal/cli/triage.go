@@ -9,11 +9,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/situker/qqmailctl/internal/cleanupplan"
-	"github.com/situker/qqmailctl/internal/errmap"
-	"github.com/situker/qqmailctl/internal/output"
-	"github.com/situker/qqmailctl/internal/policy"
-	"github.com/situker/qqmailctl/internal/triage"
+	"github.com/situker/qqmail-cli/internal/cleanupplan"
+	"github.com/situker/qqmail-cli/internal/errmap"
+	"github.com/situker/qqmail-cli/internal/output"
+	"github.com/situker/qqmail-cli/internal/policy"
+	"github.com/situker/qqmail-cli/internal/triage"
 	"github.com/spf13/cobra"
 )
 
@@ -166,7 +166,7 @@ func renderPlanMarkdown(plan cleanupplan.Plan, analysis triage.Analysis) []byte 
 	}
 	sort.Strings(keys)
 	var builder strings.Builder
-	builder.WriteString("# qqmailctl triage review\n\n")
+	builder.WriteString("# qqmail-cli triage review\n\n")
 	builder.WriteString("> ⚠️ 这份计划里的每一封邮件都会在 `clean --execute` 后被移入服务器已删除文件夹（QQ 会按其回收站周期自动清空）。\n")
 	builder.WriteString("> 执行前请逐组审阅；不想清理的条目，直接从 plan.json 的 items 中删除即可。\n")
 	builder.WriteString("> 星标邮件、范围外文件夹、未列入清理类别、置信度不足、过新的邮件已被自动排除，不在此列。\n\n")

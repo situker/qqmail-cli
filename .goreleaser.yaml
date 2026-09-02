@@ -1,11 +1,11 @@
 version: 2
 
-project_name: qqmailctl
+project_name: qqmail-cli
 
 builds:
-  - id: qqmailctl
-    main: ./cmd/qqmailctl
-    binary: qqmailctl
+  - id: qqmail-cli
+    main: ./cmd/qqmail-cli
+    binary: qqmail-cli
     env:
       - CGO_ENABLED=0
     goos: [windows, darwin, linux]
@@ -32,7 +32,7 @@ archives:
       - CODE_OF_CONDUCT.md
       - CHANGELOG.md
       - docs/**
-      - skills/qqmailctl/SKILL.md
+      - skills/qqmail-cli/SKILL.md
 
 checksum:
   name_template: checksums.txt
@@ -54,4 +54,4 @@ changelog:
 
 release:
   footer: |
-    qqmailctl 是独立的第三方开源项目，与腾讯及 QQ 邮箱不存在隶属、合作或官方授权关系；项目通过用户主动开启的标准 IMAP/SMTP 服务工作。与 qmail 生态的 qmailctl 工具无任何关联。
+    qqmail-cli 是独立的第三方开源项目，与腾讯及 QQ 邮箱不存在隶属、合作或官方授权关系；项目通过用户主动开启的标准 IMAP/SMTP 服务工作。与 qmail 生态的 qmailctl 工具无任何关联。

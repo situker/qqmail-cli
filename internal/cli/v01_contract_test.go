@@ -10,11 +10,11 @@ import (
 	"testing"
 
 	jsonschema "github.com/santhosh-tekuri/jsonschema/v6"
-	"github.com/situker/qqmailctl/internal/account"
-	"github.com/situker/qqmailctl/internal/imapx"
-	"github.com/situker/qqmailctl/internal/mailmodel"
-	"github.com/situker/qqmailctl/internal/secrets"
-	projectschemas "github.com/situker/qqmailctl/schemas"
+	"github.com/situker/qqmail-cli/internal/account"
+	"github.com/situker/qqmail-cli/internal/imapx"
+	"github.com/situker/qqmail-cli/internal/mailmodel"
+	"github.com/situker/qqmail-cli/internal/secrets"
+	projectschemas "github.com/situker/qqmail-cli/schemas"
 )
 
 // richReader adds realistic list/search results on top of fakeReader so the
@@ -104,7 +104,7 @@ func validateDocument(t *testing.T, schemaName string, raw []byte) {
 		t.Fatal(err)
 	}
 	compiler := jsonschema.NewCompiler()
-	resource := "https://github.com/situker/qqmailctl/schemas/" + schemaName
+	resource := "https://github.com/situker/qqmail-cli/schemas/" + schemaName
 	if err := compiler.AddResource(resource, schemaValue); err != nil {
 		t.Fatal(err)
 	}

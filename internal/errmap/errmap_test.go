@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/situker/qqmailctl/internal/output"
+	"github.com/situker/qqmail-cli/internal/output"
 )
 
 func TestExitCodeTable(t *testing.T) {

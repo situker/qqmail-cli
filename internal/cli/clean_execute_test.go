@@ -9,10 +9,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/situker/qqmailctl/internal/account"
-	"github.com/situker/qqmailctl/internal/imapx"
-	"github.com/situker/qqmailctl/internal/index"
-	"github.com/situker/qqmailctl/internal/mailmodel"
+	"github.com/situker/qqmail-cli/internal/account"
+	"github.com/situker/qqmail-cli/internal/imapx"
+	"github.com/situker/qqmail-cli/internal/index"
+	"github.com/situker/qqmail-cli/internal/mailmodel"
 )
 
 // fakeCleanMutator satisfies all three verification gates for the message the
@@ -39,7 +39,7 @@ func (f fakeCleanMutator) MoveUID(_ context.Context, id mailmodel.MsgID, destina
 }
 
 func TestCleanExecuteEndToEnd(t *testing.T) {
-	t.Setenv("QQMAILCTL_READONLY", "0")
+	t.Setenv("QQMAIL_CLI_READONLY", "0")
 	configPath, planPath, provider := restoreFixture(t)
 	raw, _, err := fakeReader{}.FetchBodyPeek(context.Background(), mailmodel.MsgID{}, 0)
 	if err != nil {
@@ -83,7 +83,7 @@ func TestCleanExecuteEndToEnd(t *testing.T) {
 }
 
 func TestCleanExecuteRejectsOversizedBatch(t *testing.T) {
-	t.Setenv("QQMAILCTL_READONLY", "0")
+	t.Setenv("QQMAIL_CLI_READONLY", "0")
 	configPath, planPath, provider := restoreFixture(t)
 	var out, stderr bytes.Buffer
 	rt := &Runtime{

@@ -7,9 +7,9 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/situker/qqmailctl/internal/output"
-	"github.com/situker/qqmailctl/internal/policy"
-	"github.com/situker/qqmailctl/internal/secrets"
+	"github.com/situker/qqmail-cli/internal/output"
+	"github.com/situker/qqmail-cli/internal/policy"
+	"github.com/situker/qqmail-cli/internal/secrets"
 	"github.com/spf13/cobra"
 )
 

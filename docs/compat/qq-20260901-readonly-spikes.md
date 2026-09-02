@@ -21,7 +21,7 @@ Status: owner-operated, redacted Windows observation using the configured OS-key
 - ASCII SUBJECT, FROM, SINCE, OR, and HEADER commands returned tagged OK.
 - A UTF-8 Chinese query sent directly as a quoted string returned tagged OK.
 - A synchronizing literal query did not receive the required continuation; the server immediately returned SEARCH data and a tagged OK. That result is not trustworthy as a match for the intended literal payload because the payload was never sent.
-- qqmailctl therefore uses `client_window` filtering for non-ASCII `--subject`/`--from` filters. ASCII filters may continue to use server search with the existing error fallback.
+- qqmail-cli therefore uses `client_window` filtering for non-ASCII `--subject`/`--from` filters. ASCII filters may continue to use server search with the existing error fallback.
 
 ## S5 — UID state, read-only phase
 

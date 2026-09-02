@@ -6,10 +6,10 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/situker/qqmailctl/internal/imapx"
-	"github.com/situker/qqmailctl/internal/index"
-	"github.com/situker/qqmailctl/internal/mailmodel"
-	"github.com/situker/qqmailctl/internal/mimeparse"
+	"github.com/situker/qqmail-cli/internal/imapx"
+	"github.com/situker/qqmail-cli/internal/index"
+	"github.com/situker/qqmail-cli/internal/mailmodel"
+	"github.com/situker/qqmail-cli/internal/mimeparse"
 )
 
 const (

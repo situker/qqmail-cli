@@ -10,13 +10,13 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/situker/qqmailctl/internal/errmap"
-	"github.com/situker/qqmailctl/internal/imapx"
-	"github.com/situker/qqmailctl/internal/mailmodel"
-	"github.com/situker/qqmailctl/internal/mimeparse"
-	"github.com/situker/qqmailctl/internal/output"
-	"github.com/situker/qqmailctl/internal/policy"
-	"github.com/situker/qqmailctl/internal/safeio"
+	"github.com/situker/qqmail-cli/internal/errmap"
+	"github.com/situker/qqmail-cli/internal/imapx"
+	"github.com/situker/qqmail-cli/internal/mailmodel"
+	"github.com/situker/qqmail-cli/internal/mimeparse"
+	"github.com/situker/qqmail-cli/internal/output"
+	"github.com/situker/qqmail-cli/internal/policy"
+	"github.com/situker/qqmail-cli/internal/safeio"
 	"github.com/spf13/cobra"
 )
 

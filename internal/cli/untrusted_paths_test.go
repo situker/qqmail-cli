@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/situker/qqmailctl/internal/account"
-	"github.com/situker/qqmailctl/internal/imapx"
-	projectschemas "github.com/situker/qqmailctl/schemas"
+	"github.com/situker/qqmail-cli/internal/account"
+	"github.com/situker/qqmail-cli/internal/imapx"
+	projectschemas "github.com/situker/qqmail-cli/schemas"
 )
 
 // The schemas are the single source of truth for which fields carry untrusted

@@ -7,15 +7,15 @@ import (
 	"os"
 	"time"
 
-	"github.com/situker/qqmailctl/internal/account"
-	"github.com/situker/qqmailctl/internal/errmap"
-	"github.com/situker/qqmailctl/internal/imapx"
-	"github.com/situker/qqmailctl/internal/index"
-	"github.com/situker/qqmailctl/internal/mailmodel"
-	"github.com/situker/qqmailctl/internal/output"
-	"github.com/situker/qqmailctl/internal/policy"
-	"github.com/situker/qqmailctl/internal/secrets"
-	"github.com/situker/qqmailctl/internal/sendmail"
+	"github.com/situker/qqmail-cli/internal/account"
+	"github.com/situker/qqmail-cli/internal/errmap"
+	"github.com/situker/qqmail-cli/internal/imapx"
+	"github.com/situker/qqmail-cli/internal/index"
+	"github.com/situker/qqmail-cli/internal/mailmodel"
+	"github.com/situker/qqmail-cli/internal/output"
+	"github.com/situker/qqmail-cli/internal/policy"
+	"github.com/situker/qqmail-cli/internal/secrets"
+	"github.com/situker/qqmail-cli/internal/sendmail"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 )
@@ -142,7 +142,7 @@ func NewRoot(rt *Runtime) *cobra.Command {
 		}
 	}
 	root := &cobra.Command{
-		Use:           "qqmailctl",
+		Use:           "qqmail-cli",
 		Short:         "Unofficial safety-first QQ Mail CLI",
 		SilenceErrors: true,
 		SilenceUsage:  true,
@@ -154,7 +154,7 @@ func NewRoot(rt *Runtime) *cobra.Command {
 	root.SetOut(rt.Out)
 	root.SetErr(rt.Err)
 	root.SetFlagErrorFunc(func(_ *cobra.Command, err error) error {
-		return &errmap.Error{Kind: errmap.Usage, Message: "参数用法错误：" + err.Error(), Suggestion: "运行 qqmailctl --help 查看命令与参数"}
+		return &errmap.Error{Kind: errmap.Usage, Message: "参数用法错误：" + err.Error(), Suggestion: "运行 qqmail-cli --help 查看命令与参数"}
 	})
 	root.PersistentFlags().BoolVar(&rt.JSON, "json", false, "write one machine-readable JSON document")
 	root.PersistentFlags().StringVar(&rt.Account, "account", "", "account name (defaults to configured default)")
@@ -162,7 +162,7 @@ func NewRoot(rt *Runtime) *cobra.Command {
 	root.PersistentFlags().DurationVar(&rt.Timeout, "timeout", 120*time.Second, "overall timeout")
 	root.PersistentFlags().BoolVar(&rt.Verbose, "verbose", false, "write diagnostic details to stderr")
 	root.PersistentFlags().StringVar(&rt.ConfigPath, "config", "", "override config file path")
-	root.PersistentFlags().BoolVar(&rt.AuthCodeEnv, "auth-code-env", false, "explicitly allow QQMAILCTL_AUTH_CODE for this invocation")
+	root.PersistentFlags().BoolVar(&rt.AuthCodeEnv, "auth-code-env", false, "explicitly allow QQMAIL_CLI_AUTH_CODE for this invocation")
 
 	root.AddCommand(
 		newVersionCommand(rt), newCompletionCommand(root), newAuthCommand(rt), newAccountCommand(rt),
@@ -200,20 +200,20 @@ func requireFolderConsistency(cmd *cobra.Command, rt *Runtime, ids []mailmodel.M
 func requireSubcommand(cmd *cobra.Command) *cobra.Command {
 	cmd.RunE = func(c *cobra.Command, args []string) error {
 		if len(args) > 0 {
-			return &errmap.Error{Kind: errmap.Usage, Message: fmt.Sprintf("未知子命令 %q", args[0]), Suggestion: fmt.Sprintf("运行 qqmailctl %s --help 查看可用子命令", c.Name())}
+			return &errmap.Error{Kind: errmap.Usage, Message: fmt.Sprintf("未知子命令 %q", args[0]), Suggestion: fmt.Sprintf("运行 qqmail-cli %s --help 查看可用子命令", c.Name())}
 		}
-		return &errmap.Error{Kind: errmap.Usage, Message: "缺少子命令", Suggestion: fmt.Sprintf("运行 qqmailctl %s --help 查看可用子命令", c.Name())}
+		return &errmap.Error{Kind: errmap.Usage, Message: "缺少子命令", Suggestion: fmt.Sprintf("运行 qqmail-cli %s --help 查看可用子命令", c.Name())}
 	}
 	return cmd
 }
 
 func commandName(cmd *cobra.Command) string {
-	if cmd == nil || cmd.CommandPath() == "qqmailctl" {
+	if cmd == nil || cmd.CommandPath() == "qqmail-cli" {
 		return "root"
 	}
 	path := cmd.CommandPath()
-	if len(path) > len("qqmailctl ") {
-		path = path[len("qqmailctl "):]
+	if len(path) > len("qqmail-cli ") {
+		path = path[len("qqmail-cli "):]
 	}
 	for i := range path {
 		if path[i] == ' ' {

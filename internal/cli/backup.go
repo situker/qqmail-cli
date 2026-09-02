@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/situker/qqmailctl/internal/account"
-	"github.com/situker/qqmailctl/internal/cleanupplan"
-	"github.com/situker/qqmailctl/internal/errmap"
-	exporter "github.com/situker/qqmailctl/internal/export"
-	"github.com/situker/qqmailctl/internal/mailmodel"
-	"github.com/situker/qqmailctl/internal/output"
-	"github.com/situker/qqmailctl/internal/policy"
+	"github.com/situker/qqmail-cli/internal/account"
+	"github.com/situker/qqmail-cli/internal/cleanupplan"
+	"github.com/situker/qqmail-cli/internal/errmap"
+	exporter "github.com/situker/qqmail-cli/internal/export"
+	"github.com/situker/qqmail-cli/internal/mailmodel"
+	"github.com/situker/qqmail-cli/internal/output"
+	"github.com/situker/qqmail-cli/internal/policy"
 	"github.com/spf13/cobra"
 )
 

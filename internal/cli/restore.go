@@ -6,14 +6,14 @@ import (
 	"io"
 	"strings"
 
-	"github.com/situker/qqmailctl/internal/cleaner"
-	"github.com/situker/qqmailctl/internal/cleanupplan"
-	"github.com/situker/qqmailctl/internal/errmap"
-	exporter "github.com/situker/qqmailctl/internal/export"
-	"github.com/situker/qqmailctl/internal/imapx"
-	"github.com/situker/qqmailctl/internal/mailmodel"
-	"github.com/situker/qqmailctl/internal/output"
-	"github.com/situker/qqmailctl/internal/policy"
+	"github.com/situker/qqmail-cli/internal/cleaner"
+	"github.com/situker/qqmail-cli/internal/cleanupplan"
+	"github.com/situker/qqmail-cli/internal/errmap"
+	exporter "github.com/situker/qqmail-cli/internal/export"
+	"github.com/situker/qqmail-cli/internal/imapx"
+	"github.com/situker/qqmail-cli/internal/mailmodel"
+	"github.com/situker/qqmail-cli/internal/output"
+	"github.com/situker/qqmail-cli/internal/policy"
 	"github.com/spf13/cobra"
 )
 

@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/situker/qqmailctl/internal/cleanupplan"
-	"github.com/situker/qqmailctl/internal/triage"
+	"github.com/situker/qqmail-cli/internal/cleanupplan"
+	"github.com/situker/qqmail-cli/internal/triage"
 )
 
 func TestRenderPlanMarkdownSanitizesUntrustedFields(t *testing.T) {

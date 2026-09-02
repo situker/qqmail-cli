@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/situker/qqmailctl/internal/errmap"
+	"github.com/situker/qqmail-cli/internal/errmap"
 )
 
 func confirmExactCount(rt *Runtime, count int) error {

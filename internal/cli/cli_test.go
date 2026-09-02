@@ -14,15 +14,15 @@ import (
 	"time"
 
 	jsonschema "github.com/santhosh-tekuri/jsonschema/v6"
-	"github.com/situker/qqmailctl/internal/account"
-	"github.com/situker/qqmailctl/internal/cleanupplan"
-	"github.com/situker/qqmailctl/internal/errmap"
-	"github.com/situker/qqmailctl/internal/imapx"
-	"github.com/situker/qqmailctl/internal/index"
-	"github.com/situker/qqmailctl/internal/mailmodel"
-	"github.com/situker/qqmailctl/internal/policy"
-	"github.com/situker/qqmailctl/internal/secrets"
-	projectschemas "github.com/situker/qqmailctl/schemas"
+	"github.com/situker/qqmail-cli/internal/account"
+	"github.com/situker/qqmail-cli/internal/cleanupplan"
+	"github.com/situker/qqmail-cli/internal/errmap"
+	"github.com/situker/qqmail-cli/internal/imapx"
+	"github.com/situker/qqmail-cli/internal/index"
+	"github.com/situker/qqmail-cli/internal/mailmodel"
+	"github.com/situker/qqmail-cli/internal/policy"
+	"github.com/situker/qqmail-cli/internal/secrets"
+	projectschemas "github.com/situker/qqmail-cli/schemas"
 	"github.com/spf13/cobra"
 )
 
@@ -233,7 +233,7 @@ func TestSyncAndLocalSearchMatchSchemas(t *testing.T) {
 }
 
 func TestReadonlyEnvironmentBlocksEveryMutatingCommandBeforeDial(t *testing.T) {
-	t.Setenv("QQMAILCTL_READONLY", "1")
+	t.Setenv("QQMAIL_CLI_READONLY", "1")
 	dir := t.TempDir()
 	configPath := filepath.Join(dir, "config.toml")
 	cfg := &account.Config{Schema: account.ConfigSchema, DefaultAccount: "personal", Accounts: map[string]account.Account{"personal": {Email: "user@qq.com"}}}
@@ -289,25 +289,25 @@ func TestReadonlyEnvironmentBlocksEveryMutatingCommandBeforeDial(t *testing.T) {
 		}
 		// The rejection must come from the readonly gate itself — not from a
 		// sibling guard that happens to share the PolicyDenied kind.
-		if !strings.Contains(err.Error(), "QQMAILCTL_READONLY") {
+		if !strings.Contains(err.Error(), "QQMAIL_CLI_READONLY") {
 			t.Fatalf("command %v rejected by a non-readonly gate: %v", args, err)
 		}
 	}
 }
 
 func TestReadonlyUnknownValueFailsClosed(t *testing.T) {
-	t.Setenv("QQMAILCTL_READONLY", "enabled")
+	t.Setenv("QQMAIL_CLI_READONLY", "enabled")
 	if !policy.Readonly() {
 		t.Fatal("unrecognized truthy-looking value did not fail closed")
 	}
-	t.Setenv("QQMAILCTL_READONLY", "off")
+	t.Setenv("QQMAIL_CLI_READONLY", "off")
 	if policy.Readonly() {
 		t.Fatal("explicit falsy value treated as readonly")
 	}
 }
 
 func TestExecuteRejectsNonTTYBeforeMutationDial(t *testing.T) {
-	t.Setenv("QQMAILCTL_READONLY", "0")
+	t.Setenv("QQMAIL_CLI_READONLY", "0")
 	id := mailmodel.MsgID{Folder: "INBOX", UIDValidity: 1, UID: 1}.String()
 	dialed := false
 	rt := &Runtime{Out: &bytes.Buffer{}, Err: &bytes.Buffer{}, In: strings.NewReader("1\n"), IsTerminal: func(io.Reader) bool { return false }}
@@ -326,7 +326,7 @@ func TestExecuteRejectsNonTTYBeforeMutationDial(t *testing.T) {
 func validateOutput(t *testing.T, filename string, raw []byte) {
 	t.Helper()
 	compiler := jsonschema.NewCompiler()
-	base := "https://github.com/situker/qqmailctl/schemas/"
+	base := "https://github.com/situker/qqmail-cli/schemas/"
 	for _, name := range projectschemas.Names() {
 		document, err := projectschemas.Get(name)
 		if err != nil {

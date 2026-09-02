@@ -1,9 +1,9 @@
 $ErrorActionPreference = "Stop"
 $ProjectDir = Split-Path -Parent $PSScriptRoot
-$Binary = Join-Path $ProjectDir "bin\qqmailctl.exe"
+$Binary = Join-Path $ProjectDir "bin\qqmail-cli.exe"
 
 if (-not (Test-Path -LiteralPath $Binary)) {
-    throw "Build bin\qqmailctl.exe before running this smoke test."
+    throw "Build bin\qqmail-cli.exe before running this smoke test."
 }
 
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
@@ -20,16 +20,16 @@ if ($Agent.data.risk_levels -notcontains "mutate" -or $Agent.data.risk_levels -n
     throw "agent-info risk catalog failed"
 }
 
-$PreviousReadonly = $env:QQMAILCTL_READONLY
+$PreviousReadonly = $env:QQMAIL_CLI_READONLY
 try {
-    $env:QQMAILCTL_READONLY = "1"
+    $env:QQMAIL_CLI_READONLY = "1"
     $ReadonlyAgent = (& $Binary agent-info | ConvertFrom-Json)
     if (-not $ReadonlyAgent.ok -or -not $ReadonlyAgent.data.readonly) {
         throw "agent-info readonly environment state failed"
     }
 }
 finally {
-    $env:QQMAILCTL_READONLY = $PreviousReadonly
+    $env:QQMAIL_CLI_READONLY = $PreviousReadonly
 }
 
 $Schema = (& $Binary schema version | ConvertFrom-Json)
@@ -37,4 +37,4 @@ if (-not $Schema.'$schema') {
     throw "embedded schema output failed"
 }
 
-Write-Output "qqmailctl PowerShell smoke test passed"
+Write-Output "qqmail-cli PowerShell smoke test passed"

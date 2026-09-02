@@ -16,13 +16,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/situker/qqmailctl/internal/account"
-	"github.com/situker/qqmailctl/internal/errmap"
-	"github.com/situker/qqmailctl/internal/imapx"
-	"github.com/situker/qqmailctl/internal/mailmodel"
-	"github.com/situker/qqmailctl/internal/mimeparse"
-	"github.com/situker/qqmailctl/internal/safeio"
-	"github.com/situker/qqmailctl/internal/secrets"
+	"github.com/situker/qqmail-cli/internal/account"
+	"github.com/situker/qqmail-cli/internal/errmap"
+	"github.com/situker/qqmail-cli/internal/imapx"
+	"github.com/situker/qqmail-cli/internal/mailmodel"
+	"github.com/situker/qqmail-cli/internal/mimeparse"
+	"github.com/situker/qqmail-cli/internal/safeio"
+	"github.com/situker/qqmail-cli/internal/secrets"
 )
 
 const ManifestSchema = 1
@@ -288,7 +288,7 @@ func writeAtomic(path string, raw []byte, mode os.FileMode) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return err
 	}
-	tmp, err := os.CreateTemp(filepath.Dir(path), ".qqmailctl-*.tmp")
+	tmp, err := os.CreateTemp(filepath.Dir(path), ".qqmail-cli-*.tmp")
 	if err != nil {
 		return err
 	}

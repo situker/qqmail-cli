@@ -7,17 +7,17 @@ import (
 	"time"
 
 	imap "github.com/emersion/go-imap/v2"
-	"github.com/situker/qqmailctl/internal/account"
-	"github.com/situker/qqmailctl/internal/secrets"
+	"github.com/situker/qqmail-cli/internal/account"
+	"github.com/situker/qqmail-cli/internal/secrets"
 )
 
 // Manual live probe: dumps the SHAPE of QQ's FETCH response for a
 // HEADER.FIELDS request (section counts and spec fields only — no message
-// content is printed). Gated on QQMAILCTL_LIVE_PROBE=1 plus an existing
+// content is printed). Gated on QQMAIL_CLI_LIVE_PROBE=1 plus an existing
 // keyring credential; never runs in CI.
 func TestLiveProbeHeaderFieldsResponseShape(t *testing.T) {
-	if os.Getenv("QQMAILCTL_LIVE_PROBE") != "1" {
-		t.Skip("set QQMAILCTL_LIVE_PROBE=1 to run against the configured real account")
+	if os.Getenv("QQMAIL_CLI_LIVE_PROBE") != "1" {
+		t.Skip("set QQMAIL_CLI_LIVE_PROBE=1 to run against the configured real account")
 	}
 	cfg, _, err := account.Load("")
 	if err != nil {

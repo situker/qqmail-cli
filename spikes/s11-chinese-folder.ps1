@@ -2,7 +2,7 @@
 .SYNOPSIS
 S11 creates, renames, verifies, and removes one uniquely named Chinese probe folder using Modified UTF-7.
 .DESCRIPTION
-Never run on a personal mailbox. Requires QQMAILCTL_E2E_WRITE=1, QQMAILCTL_DEDICATED_TEST_ACCOUNT=1, and -ExecuteWriteProbe. It touches only the folders it creates.
+Never run on a personal mailbox. Requires QQMAIL_CLI_E2E_WRITE=1, QQMAIL_CLI_DEDICATED_TEST_ACCOUNT=1, and -ExecuteWriteProbe. It touches only the folders it creates.
 Expected product: spikes/results/s11-*.json with CREATE/RENAME/LIST/cleanup statuses and no folder name.
 #>
 [CmdletBinding()]

@@ -98,7 +98,7 @@ func CachePath(accountName string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(base, "qqmailctl", safeAccountName(accountName)+".db"), nil
+	return filepath.Join(base, "qqmail-cli", safeAccountName(accountName)+".db"), nil
 }
 
 func Open(accountName string, write bool) (*DB, error) {

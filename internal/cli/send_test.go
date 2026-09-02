@@ -9,18 +9,18 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/situker/qqmailctl/internal/account"
-	"github.com/situker/qqmailctl/internal/errmap"
-	"github.com/situker/qqmailctl/internal/imapx"
-	"github.com/situker/qqmailctl/internal/index"
-	"github.com/situker/qqmailctl/internal/secrets"
-	"github.com/situker/qqmailctl/internal/sendmail"
+	"github.com/situker/qqmail-cli/internal/account"
+	"github.com/situker/qqmail-cli/internal/errmap"
+	"github.com/situker/qqmail-cli/internal/imapx"
+	"github.com/situker/qqmail-cli/internal/index"
+	"github.com/situker/qqmail-cli/internal/secrets"
+	"github.com/situker/qqmail-cli/internal/sendmail"
 )
 
 const testAuthCode = "abcdefghijklmnop"
 
 func TestSendExecuteRejectsEmptyAllowlistBeforeCredentialAndTransport(t *testing.T) {
-	t.Setenv("QQMAILCTL_READONLY", "0")
+	t.Setenv("QQMAIL_CLI_READONLY", "0")
 	configPath := saveSendConfig(t, nil)
 	sent := false
 	rt := &Runtime{
@@ -40,7 +40,7 @@ func TestSendExecuteRejectsEmptyAllowlistBeforeCredentialAndTransport(t *testing
 }
 
 func TestSendExecuteRejectsNonTTYBeforeCredentialAndTransport(t *testing.T) {
-	t.Setenv("QQMAILCTL_READONLY", "0")
+	t.Setenv("QQMAIL_CLI_READONLY", "0")
 	configPath := saveSendConfig(t, []string{"reader@example.com"})
 	sent := false
 	rt := &Runtime{
@@ -60,7 +60,7 @@ func TestSendExecuteRejectsNonTTYBeforeCredentialAndTransport(t *testing.T) {
 }
 
 func TestSendExecuteUsesAllowlistAndWritesContentFreeAudit(t *testing.T) {
-	t.Setenv("QQMAILCTL_READONLY", "0")
+	t.Setenv("QQMAIL_CLI_READONLY", "0")
 	configPath := saveSendConfig(t, []string{"reader@example.com"})
 	cachePath := filepath.Join(t.TempDir(), "cache.db")
 	var out, stderr bytes.Buffer
@@ -113,7 +113,7 @@ func TestSendExecuteUsesAllowlistAndWritesContentFreeAudit(t *testing.T) {
 }
 
 func TestReplyAndForwardBuildExpectedThreading(t *testing.T) {
-	t.Setenv("QQMAILCTL_READONLY", "0")
+	t.Setenv("QQMAIL_CLI_READONLY", "0")
 	id := "m1_eyJmIjoiSU5CT1giLCJ2IjoxLCJ1IjoxfQ"
 	for _, tc := range []struct {
 		name  string

@@ -1,5 +1,5 @@
 name: Feature request
-description: Propose a scoped qqmailctl improvement without sharing private mail
+description: Propose a scoped qqmail-cli improvement without sharing private mail
 title: "feat: "
 labels: [enhancement]
 body:

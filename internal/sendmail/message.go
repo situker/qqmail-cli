@@ -15,7 +15,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/situker/qqmailctl/internal/safeio"
+	"github.com/situker/qqmail-cli/internal/safeio"
 )
 
 const (

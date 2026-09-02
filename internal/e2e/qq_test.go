@@ -6,18 +6,18 @@ import (
 	"testing"
 	"time"
 
-	"github.com/situker/qqmailctl/internal/account"
-	"github.com/situker/qqmailctl/internal/imapx"
+	"github.com/situker/qqmail-cli/internal/account"
+	"github.com/situker/qqmail-cli/internal/imapx"
 )
 
 func TestDedicatedQQAccountReadOnly(t *testing.T) {
-	if os.Getenv("QQMAILCTL_E2E") != "1" {
-		t.Skip("set QQMAILCTL_E2E=1 to run the dedicated-account read-only probe")
+	if os.Getenv("QQMAIL_CLI_E2E") != "1" {
+		t.Skip("set QQMAIL_CLI_E2E=1 to run the dedicated-account read-only probe")
 	}
-	email := os.Getenv("QQMAILCTL_TEST_EMAIL")
-	authCode := os.Getenv("QQMAILCTL_AUTH_CODE")
+	email := os.Getenv("QQMAIL_CLI_TEST_EMAIL")
+	authCode := os.Getenv("QQMAIL_CLI_AUTH_CODE")
 	if email == "" || authCode == "" {
-		t.Fatal("QQMAILCTL_TEST_EMAIL and QQMAILCTL_AUTH_CODE are required")
+		t.Fatal("QQMAIL_CLI_TEST_EMAIL and QQMAIL_CLI_AUTH_CODE are required")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()

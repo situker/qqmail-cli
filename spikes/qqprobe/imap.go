@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/situker/qqmailctl/internal/account"
-	"github.com/situker/qqmailctl/internal/output"
+	"github.com/situker/qqmail-cli/internal/account"
+	"github.com/situker/qqmail-cli/internal/output"
 )
 
 type rawIMAP struct {

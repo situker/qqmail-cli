@@ -9,8 +9,8 @@ import (
 	"time"
 
 	jsonschema "github.com/santhosh-tekuri/jsonschema/v6"
-	"github.com/situker/qqmailctl/internal/mailmodel"
-	projectschemas "github.com/situker/qqmailctl/schemas"
+	"github.com/situker/qqmail-cli/internal/mailmodel"
+	projectschemas "github.com/situker/qqmail-cli/schemas"
 )
 
 const Schema = 1
@@ -55,7 +55,7 @@ func Validate(raw []byte) error {
 		return err
 	}
 	compiler := jsonschema.NewCompiler()
-	const resource = "https://github.com/situker/qqmailctl/schemas/plan.schema.json"
+	const resource = "https://github.com/situker/qqmail-cli/schemas/plan.schema.json"
 	if err := compiler.AddResource(resource, schemaValue); err != nil {
 		return err
 	}

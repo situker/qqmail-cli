@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/situker/qqmailctl/internal/cli"
-	"github.com/situker/qqmailctl/internal/output"
+	"github.com/situker/qqmail-cli/internal/cli"
+	"github.com/situker/qqmail-cli/internal/output"
 )
 
 var (

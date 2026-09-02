@@ -29,7 +29,7 @@ github.com/pelletier/go-toml/v2,https://github.com/pelletier/go-toml/blob/v2.2.4
 github.com/pkg/errors,https://github.com/pkg/errors/blob/v0.9.1/LICENSE,BSD-2-Clause
 github.com/remyoudompheng/bigfft,https://github.com/remyoudompheng/bigfft/blob/24d4a6f8daec/LICENSE,BSD-3-Clause
 github.com/santhosh-tekuri/jsonschema/v6,https://github.com/santhosh-tekuri/jsonschema/blob/v6.0.3/LICENSE,Apache-2.0
-github.com/situker/qqmailctl,https://github.com/situker/qqmailctl/blob/HEAD/LICENSE,Apache-2.0
+github.com/situker/qqmail-cli,https://github.com/situker/qqmail-cli/blob/HEAD/LICENSE,Apache-2.0
 github.com/spf13/cobra,https://github.com/spf13/cobra/blob/v1.10.2/LICENSE.txt,Apache-2.0
 github.com/spf13/pflag,https://github.com/spf13/pflag/blob/v1.0.9/LICENSE,BSD-3-Clause
 github.com/ssor/bom,https://github.com/ssor/bom/blob/6386211fdfcf/LICENSE,MIT

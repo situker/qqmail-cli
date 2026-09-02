@@ -2,7 +2,7 @@
 .SYNOPSIS
 S4 runs a low-rate login ladder and stops at the first failure.
 .DESCRIPTION
-Do not run on a personal mailbox. Requires QQMAILCTL_E2E_WRITE=1 and QQMAILCTL_DEDICATED_TEST_ACCOUNT=1 plus -ExecuteProbe.
+Do not run on a personal mailbox. Requires QQMAIL_CLI_E2E_WRITE=1 and QQMAIL_CLI_DEDICATED_TEST_ACCOUNT=1 plus -ExecuteProbe.
 Expected product: spikes/results/s4-*.json. Authentication failures are never retried; wait 10-15 minutes after any provider throttle signal.
 #>
 [CmdletBinding()]

@@ -17,7 +17,7 @@ import (
 	"time"
 
 	smtp "github.com/emersion/go-smtp"
-	"github.com/situker/qqmailctl/internal/errmap"
+	"github.com/situker/qqmail-cli/internal/errmap"
 )
 
 func fixtureTLS(t *testing.T) (*tls.Config, *tls.Config) {

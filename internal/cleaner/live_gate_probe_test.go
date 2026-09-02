@@ -7,27 +7,27 @@ import (
 	"testing"
 	"time"
 
-	"github.com/situker/qqmailctl/internal/account"
-	"github.com/situker/qqmailctl/internal/cleanupplan"
-	"github.com/situker/qqmailctl/internal/imapx"
-	"github.com/situker/qqmailctl/internal/secrets"
+	"github.com/situker/qqmail-cli/internal/account"
+	"github.com/situker/qqmail-cli/internal/cleanupplan"
+	"github.com/situker/qqmail-cli/internal/imapx"
+	"github.com/situker/qqmail-cli/internal/secrets"
 )
 
 // Manual live diagnostic: runs the three-level gate against the configured
 // real account for a SAMPLE of a plan and reports failure reasons grouped by
 // gate/reason (ids and counts only — no subjects or addresses). Gated on
-// QQMAILCTL_LIVE_GATE_PROBE=<plan path>; never runs in CI.
+// QQMAIL_CLI_LIVE_GATE_PROBE=<plan path>; never runs in CI.
 func TestLiveGateProbeSample(t *testing.T) {
-	planPath := os.Getenv("QQMAILCTL_LIVE_GATE_PROBE")
+	planPath := os.Getenv("QQMAIL_CLI_LIVE_GATE_PROBE")
 	if planPath == "" {
-		t.Skip("set QQMAILCTL_LIVE_GATE_PROBE=<plan.json> to run against the configured real account")
+		t.Skip("set QQMAIL_CLI_LIVE_GATE_PROBE=<plan.json> to run against the configured real account")
 	}
 	plan, err := cleanupplan.Load(planPath)
 	if err != nil {
 		t.Fatal(err)
 	}
 	sample := plan
-	if os.Getenv("QQMAILCTL_LIVE_GATE_FULL") != "1" && len(sample.Items) > 40 {
+	if os.Getenv("QQMAIL_CLI_LIVE_GATE_FULL") != "1" && len(sample.Items) > 40 {
 		sample.Items = sample.Items[:40]
 	}
 	cfg, _, err := account.Load("")
@@ -64,7 +64,7 @@ func TestLiveGateProbeSample(t *testing.T) {
 	if len(result.Failures) > 0 {
 		t.Logf("first failing id: %s", result.Failures[0].ID)
 	}
-	if out := os.Getenv("QQMAILCTL_LIVE_GATE_ELIGIBLE_OUT"); out != "" {
+	if out := os.Getenv("QQMAIL_CLI_LIVE_GATE_ELIGIBLE_OUT"); out != "" {
 		ids := make([]string, 0, len(result.Eligible))
 		for _, e := range result.Eligible {
 			ids = append(ids, e.IDString)

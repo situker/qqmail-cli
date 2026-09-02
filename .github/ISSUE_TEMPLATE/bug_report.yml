@@ -1,5 +1,5 @@
 name: Bug report
-description: Report a reproducible qqmailctl problem without sharing secrets or private mail
+description: Report a reproducible qqmail-cli problem without sharing secrets or private mail
 title: "bug: "
 labels: [bug]
 body:
@@ -9,8 +9,8 @@ body:
   - type: input
     id: version
     attributes:
-      label: qqmailctl version
-      placeholder: Output of qqmailctl version (not credentials)
+      label: qqmail-cli version
+      placeholder: Output of qqmail-cli version (not credentials)
     validations:
       required: true
   - type: dropdown

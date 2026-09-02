@@ -20,7 +20,7 @@ func acquireProcessLock(path string) (*processLock, error) {
 	}
 	if err := unix.Flock(int(file.Fd()), unix.LOCK_EX|unix.LOCK_NB); err != nil {
 		_ = file.Close()
-		return nil, fmt.Errorf("another qqmailctl process holds the cache lock: %w", err)
+		return nil, fmt.Errorf("another qqmail-cli process holds the cache lock: %w", err)
 	}
 	return &processLock{file: file}, nil
 }

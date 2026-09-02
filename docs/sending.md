@@ -19,16 +19,16 @@ send_allowlist = ["you@example.com", "*@your-company.example"]
 ## 先 dry-run，再由人在场执行
 
 ```text
-qqmailctl send --to you@example.com --cc teammate@your-company.example --subject "主题" --body-file body.txt --attach report.pdf
-qqmailctl reply <opaque-id> --body "回复内容"
-qqmailctl forward <opaque-id> --to you@example.com --body "转发说明"
+qqmail-cli send --to you@example.com --cc teammate@your-company.example --subject "主题" --body-file body.txt --attach report.pdf
+qqmail-cli reply <opaque-id> --body "回复内容"
+qqmail-cli forward <opaque-id> --to you@example.com --body "转发说明"
 ```
 
 默认 dry-run 会构建 MIME、检查资源上限并展示 from/to/cc/bcc、主题、正文摘要和附件清单，但不会连接 SMTP。`reply` 和 `forward` 会用 BODY.PEEK 读取原邮件；生成的主题、引用体、原发件人与附件名仍是不可信数据，人读预览会剥控制符、ANSI 和 bidi 覆盖符。
 
 真正发送必须同时满足：
 
-1. 未启用 `QQMAILCTL_READONLY=1`。
+1. 未启用 `QQMAIL_CLI_READONLY=1`。
 2. 全部收件人命中非空白名单。
 3. stdin 是真实 TTY。
 4. 人工核对摘要并键入 `SEND`。
@@ -47,4 +47,4 @@ qqmailctl forward <opaque-id> --to you@example.com --body "转发说明"
 - QQ 默认优先 465 隐式 TLS；只有连接建立失败才尝试 587 STARTTLS。TLS 最低版本为 1.2。
 - 所有发送尝试与结果写 SQLite audit 表及内容无关的 JSONL；审计不记录授权码、地址、主题、正文或附件名。
 
-S9 真实发送配额探针尚未运行。只有专用测试邮箱、双重写门（`QQMAILCTL_E2E_WRITE=1` + `QQMAILCTL_DEDICATED_TEST_ACCOUNT=1`）和自发自收件人条件同时满足时才能触发。
+S9 真实发送配额探针尚未运行。只有专用测试邮箱、双重写门（`QQMAIL_CLI_E2E_WRITE=1` + `QQMAIL_CLI_DEDICATED_TEST_ACCOUNT=1`）和自发自收件人条件同时满足时才能触发。

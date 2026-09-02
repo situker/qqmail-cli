@@ -10,12 +10,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/situker/qqmailctl/internal/account"
-	"github.com/situker/qqmailctl/internal/cleanupplan"
-	"github.com/situker/qqmailctl/internal/imapx"
-	"github.com/situker/qqmailctl/internal/index"
-	"github.com/situker/qqmailctl/internal/mailmodel"
-	"github.com/situker/qqmailctl/internal/secrets"
+	"github.com/situker/qqmail-cli/internal/account"
+	"github.com/situker/qqmail-cli/internal/cleanupplan"
+	"github.com/situker/qqmail-cli/internal/imapx"
+	"github.com/situker/qqmail-cli/internal/index"
+	"github.com/situker/qqmail-cli/internal/mailmodel"
+	"github.com/situker/qqmail-cli/internal/secrets"
 )
 
 type fakeRestoreMutator struct{ fakeReader }
@@ -95,7 +95,7 @@ func TestRestoreDryRunMatchesSchemaAndLocates(t *testing.T) {
 }
 
 func TestRestoreExecuteMovesBackAndMatchesSchema(t *testing.T) {
-	t.Setenv("QQMAILCTL_READONLY", "0")
+	t.Setenv("QQMAIL_CLI_READONLY", "0")
 	configPath, planPath, provider := restoreFixture(t)
 	var out, stderr bytes.Buffer
 	rt := &Runtime{

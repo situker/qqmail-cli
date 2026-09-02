@@ -7,7 +7,7 @@ import (
 	"net"
 	"strings"
 
-	"github.com/situker/qqmailctl/internal/output"
+	"github.com/situker/qqmail-cli/internal/output"
 )
 
 type Kind string
@@ -65,10 +65,10 @@ func Classify(err error) *Error {
 	}
 	lower := strings.ToLower(err.Error())
 	// Cobra usage errors must be classified before the server-error substring
-	// heuristics below: `qqmailctl login` produces `unknown command "login"`,
+	// heuristics below: `qqmail-cli login` produces `unknown command "login"`,
 	// which the auth substring match would otherwise misreport as auth_failed.
 	if isUsageErrorText(lower) {
-		return &Error{Kind: Usage, Message: "命令用法错误：" + err.Error(), Suggestion: "运行 qqmailctl --help 查看命令与参数", Cause: err}
+		return &Error{Kind: Usage, Message: "命令用法错误：" + err.Error(), Suggestion: "运行 qqmail-cli --help 查看命令与参数", Cause: err}
 	}
 	switch {
 	case strings.Contains(lower, "rate limit"), strings.Contains(lower, "too many"), strings.Contains(lower, "frequency"):

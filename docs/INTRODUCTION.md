@@ -1,8 +1,8 @@
-# qqmailctl 项目介绍
+# qqmail-cli 项目介绍
 
-qqmailctl 是一个面向人类脚本与 AI Agent 的 QQ 邮箱安全优先命令行工具。它把标准 IMAP/SMTP 能力整理为稳定、可审计、默认保守的本地 CLI，让邮件读取、检索、整理、备份与发送都能进入自动化工作流。
+qqmail-cli 是一个面向人类脚本与 AI Agent 的 QQ 邮箱安全优先命令行工具。它把标准 IMAP/SMTP 能力整理为稳定、可审计、默认保守的本地 CLI，让邮件读取、检索、整理、备份与发送都能进入自动化工作流。
 
-qqmailctl 是独立的第三方开源项目，与腾讯及 QQ 邮箱不存在隶属、合作或官方授权关系；项目通过用户主动开启的标准 IMAP/SMTP 服务工作。它也与 qmail 生态中的同名工具无关。
+qqmail-cli 是独立的第三方开源项目，与腾讯及 QQ 邮箱不存在隶属、合作或官方授权关系；项目通过用户主动开启的标准 IMAP/SMTP 服务工作。它也与 qmail 生态中的同名工具无关。
 
 ## 它解决什么问题
 
@@ -13,7 +13,7 @@ QQ 邮箱网页端适合人工操作，但不适合脚本和 Agent 稳定调用�
 - 邮件正文、主题和附件名是不可信输入，可能污染终端或诱导 Agent 扩权。
 - 批量整理与发送如果缺少备份、白名单和人工确认，误操作成本很高。
 
-qqmailctl 把这些风险变成代码级约束，而不是只写在注意事项里。
+qqmail-cli 把这些风险变成代码级约束，而不是只写在注意事项里。
 
 ## 适合谁
 
@@ -52,7 +52,7 @@ qqmailctl 把这些风险变成代码级约束，而不是只写在注意事项�
 核心约束：
 
 1. 授权码进入操作系统凭据管理器，不进入仓库或普通配置文件。
-2. `QQMAILCTL_READONLY=1` 会在取凭证和联网前阻断所有 mutate、destructive 与真实 send 操作。
+2. `QQMAIL_CLI_READONLY=1` 会在取凭证和联网前阻断所有 mutate、destructive 与真实 send 操作。
 3. `clean --execute` 先验证 manifest HMAC、本地 `.eml` 哈希和服务器 UIDVALIDITY/大小/Message-ID；`--paranoid` 再比对全文 SHA-256。
 4. 项目没有面向用户的永久删除命令，任何协议路径都禁止裸 `EXPUNGE`。
 5. 全部收件人必须命中发送白名单；Bcc 不进入 MIME 头；真实发送必须由人在 TTY 中确认。

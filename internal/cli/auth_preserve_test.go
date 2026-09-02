@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/situker/qqmailctl/internal/account"
-	"github.com/situker/qqmailctl/internal/imapx"
-	"github.com/situker/qqmailctl/internal/secrets"
+	"github.com/situker/qqmail-cli/internal/account"
+	"github.com/situker/qqmail-cli/internal/imapx"
+	"github.com/situker/qqmail-cli/internal/secrets"
 )
 
 // A re-login after an authorization-code reset must not wipe the account's

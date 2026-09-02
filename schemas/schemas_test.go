@@ -9,7 +9,7 @@ import (
 
 func TestEveryEmbeddedSchemaCompiles(t *testing.T) {
 	compiler := jsonschema.NewCompiler()
-	const base = "https://github.com/situker/qqmailctl/schemas/"
+	const base = "https://github.com/situker/qqmail-cli/schemas/"
 	for _, name := range Names() {
 		raw, err := Get(name)
 		if err != nil {

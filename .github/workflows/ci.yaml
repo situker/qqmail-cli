@@ -26,7 +26,7 @@ jobs:
           cache-dependency-path: go.sum
       - run: go test ./...
       - run: go vet ./...
-      - run: go build ./cmd/qqmailctl
+      - run: go build ./cmd/qqmail-cli
 
   lint:
     runs-on: ubuntu-latest

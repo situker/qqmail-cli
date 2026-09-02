@@ -7,12 +7,12 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/situker/qqmailctl/internal/account"
-	"github.com/situker/qqmailctl/internal/cleanupplan"
-	exporter "github.com/situker/qqmailctl/internal/export"
-	"github.com/situker/qqmailctl/internal/imapx"
-	"github.com/situker/qqmailctl/internal/mailmodel"
-	"github.com/situker/qqmailctl/internal/secrets"
+	"github.com/situker/qqmail-cli/internal/account"
+	"github.com/situker/qqmail-cli/internal/cleanupplan"
+	exporter "github.com/situker/qqmail-cli/internal/export"
+	"github.com/situker/qqmail-cli/internal/imapx"
+	"github.com/situker/qqmail-cli/internal/mailmodel"
+	"github.com/situker/qqmail-cli/internal/secrets"
 )
 
 type Eligible struct {

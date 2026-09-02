@@ -1,6 +1,6 @@
 # Security Policy
 
-qqmailctl 处理邮箱授权码、邮件元数据和可选本地正文缓存。请优先保护用户隐私，不要为了复现问题索取真实秘密或邮件内容。
+qqmail-cli 处理邮箱授权码、邮件元数据和可选本地正文缓存。请优先保护用户隐私，不要为了复现问题索取真实秘密或邮件内容。
 
 ## Supported versions
 
@@ -8,7 +8,7 @@ qqmailctl 处理邮箱授权码、邮件元数据和可选本地正文缓存。�
 
 ## 私密报告安全问题
 
-优先使用 GitHub 仓库的 Private Vulnerability Reporting。若该入口尚未启用，请通过仓库 owner 的私密联系方式报告，并明确说明这是 qqmailctl 安全问题。
+优先使用 GitHub 仓库的 Private Vulnerability Reporting。若该入口尚未启用，请通过仓库 owner 的私密联系方式报告，并明确说明这是 qqmail-cli 安全问题。
 
 不要在公开 Issue、Discussion、PR 或社交媒体中发布：
 
@@ -25,7 +25,7 @@ qqmailctl 处理邮箱授权码、邮件元数据和可选本地正文缓存。�
 - 读路径使用 IMAP `EXAMINE` 与 `BODY.PEEK`。
 - go-imap 写调用被限制在唯一 mutation 边界，并只能经 policy 层使用。
 - 静态与协议测试禁止裸 `EXPUNGE`；项目没有面向用户的永久删除命令。
-- `QQMAILCTL_READONLY=1` 在凭据访问和联网前阻断本地/服务器写入与真实 SMTP 发送。
+- `QQMAIL_CLI_READONLY=1` 在凭据访问和联网前阻断本地/服务器写入与真实 SMTP 发送。
 - SMTP 执行还要求非空收件人白名单和真实 TTY 人工确认。
 - 人读确认面消毒邮件派生字段；JSON 保持数据值，但字段被标记为不可信。
 - 正文与预览默认不进入 SQLite；显式缓存内容未加密。
@@ -35,7 +35,7 @@ qqmailctl 处理邮箱授权码、邮件元数据和可选本地正文缓存。�
 ## 凭据疑似泄露
 
 1. 立即到 QQ 邮箱网页端撤销对应授权码。
-2. 运行 `qqmailctl auth logout --name <name>` 删除本地引用和凭据。
+2. 运行 `qqmail-cli auth logout --name <name>` 删除本地引用和凭据。
 3. 检查 shell 历史、CI 日志、进程转储、截图和提交历史。
 4. 重新生成授权码，并只通过交互隐藏输入存储。
 5. 如果秘密进入 Git 历史，即使删除文件也视为已泄露，仍需撤销。

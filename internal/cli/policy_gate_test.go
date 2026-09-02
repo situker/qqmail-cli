@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/situker/qqmailctl/internal/errmap"
+	"github.com/situker/qqmail-cli/internal/errmap"
 )
 
 // The count/token confirmations are the last human gate in front of every

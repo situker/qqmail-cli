@@ -1,13 +1,13 @@
-# qqmailctl 架构说明
+# qqmail-cli 架构说明
 
 ## 设计目标
 
-qqmailctl 是单进程、单二进制、本地优先的邮件 CLI。设计优先级依次是：凭证安全、不可误删、可审计、机器契约稳定、QQ 方言兼容、跨平台可构建。
+qqmail-cli 是单进程、单二进制、本地优先的邮件 CLI。设计优先级依次是：凭证安全、不可误删、可审计、机器契约稳定、QQ 方言兼容、跨平台可构建。
 
 ## 组件关系
 
 ```text
-cmd/qqmailctl
+cmd/qqmail-cli
     │
     ▼
 internal/cli ─────────────── schemas/
@@ -91,7 +91,7 @@ clean --plan
 
 - AST import 与方法调用守卫。
 - command catalog 风险白名单。
-- `QQMAILCTL_READONLY` 前置拒绝。
+- `QQMAIL_CLI_READONLY` 前置拒绝。
 - dry-run 与真实 TTY 确认。
 - SQLite + JSONL 双审计。
 - 方言模拟器捕获完整协议流程，并拒绝任何含 `EXPUNGE` 的下发。

@@ -6,11 +6,11 @@ import (
 	"io"
 	"sort"
 
-	"github.com/situker/qqmailctl/internal/cleaner"
-	"github.com/situker/qqmailctl/internal/cleanupplan"
-	"github.com/situker/qqmailctl/internal/errmap"
-	"github.com/situker/qqmailctl/internal/output"
-	"github.com/situker/qqmailctl/internal/policy"
+	"github.com/situker/qqmail-cli/internal/cleaner"
+	"github.com/situker/qqmail-cli/internal/cleanupplan"
+	"github.com/situker/qqmail-cli/internal/errmap"
+	"github.com/situker/qqmail-cli/internal/output"
+	"github.com/situker/qqmail-cli/internal/policy"
 	"github.com/spf13/cobra"
 )
 

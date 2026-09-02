@@ -1,8 +1,8 @@
-# qqmailctl 功能与设计全景
+# qqmail-cli 功能与设计全景
 
-> 本文是 qqmailctl 的完整功能与设计参考，一篇读懂"它能做什么、怎么做到的、为什么这样设计"。面向想全面了解项目的使用者、贡献者与技术读者。
+> 本文是 qqmail-cli 的完整功能与设计参考，一篇读懂"它能做什么、怎么做到的、为什么这样设计"。面向想全面了解项目的使用者、贡献者与技术读者。
 
-qqmailctl 是独立的第三方开源项目，与腾讯及 QQ 邮箱不存在隶属、合作或官方授权关系；项目通过用户主动开启的标准 IMAP/SMTP 服务工作。与 qmail 生态的 qmailctl 工具无任何关联。
+qqmail-cli 是独立的第三方开源项目，与腾讯及 QQ 邮箱不存在隶属、合作或官方授权关系；项目通过用户主动开启的标准 IMAP/SMTP 服务工作。与 qmail 生态的 qmailctl 工具无任何关联。
 
 ---
 
@@ -10,7 +10,7 @@ qqmailctl 是独立的第三方开源项目，与腾讯及 QQ 邮箱不存在隶
 
 **一个敢把 QQ 邮箱交给脚本和 AI Agent 的命令行工具。**
 
-它解决的不是"能不能连上邮箱"——这个市面上不缺工具——而是连上之后那些没人认真对待的事：凭证会不会泄露、Agent 会不会误删邮件、邮件正文会不会反过来指挥 Agent、批量操作会不会失控。qqmailctl 把这些约束写进代码，并用跑在 CI 里的守卫测试证明它们成立，而不是写在"注意事项"里。
+它解决的不是"能不能连上邮箱"——这个市面上不缺工具——而是连上之后那些没人认真对待的事：凭证会不会泄露、Agent 会不会误删邮件、邮件正文会不会反过来指挥 Agent、批量操作会不会失控。qqmail-cli 把这些约束写进代码，并用跑在 CI 里的守卫测试证明它们成立，而不是写在"注意事项"里。
 
 ## 2. 它解决的四类真实风险
 
@@ -21,7 +21,7 @@ qqmailctl 是独立的第三方开源项目，与腾讯及 QQ 邮箱不存在隶
 3. **内容污染面**：邮件正文、主题、附件名是不可信输入，可能污染终端或诱导 Agent 扩大权限。
 4. **误操作面**：批量整理与发送若缺备份、白名单、人工确认，误删误发代价极高。
 
-qqmailctl 对这四面的回应贯穿全部设计，下文逐一展开。
+qqmail-cli 对这四面的回应贯穿全部设计，下文逐一展开。
 
 ## 3. 完整功能地图
 
@@ -85,7 +85,7 @@ qqmailctl 对这四面的回应贯穿全部设计，下文逐一展开。
 | `schema [command]` | 输出内嵌 JSON Schema，Agent 消费任何形状前先自校验 |
 | `version` / `completion` | 版本信息 / shell 补全 |
 
-配套 `skills/qqmailctl/SKILL.md`：随仓分发的 Agent 技能文件，装完 CLI 即获得完整调用纪律（Claude Code 等 harness 直接可用）。`QQMAILCTL_READONLY=1` 一个环境变量把整个写面锁死；未知取值一律按只读处理（fail-closed）。
+配套 `skills/qqmail-cli/SKILL.md`：随仓分发的 Agent 技能文件，装完 CLI 即获得完整调用纪律（Claude Code 等 harness 直接可用）。`QQMAIL_CLI_READONLY=1` 一个环境变量把整个写面锁死；未知取值一律按只读处理（fail-closed）。
 
 ## 4. 安全模型：七道防线，全部有测试背书
 
@@ -147,35 +147,35 @@ QQ 邮箱的 IMAP 实现有多处不合规。这些不是从文档看来的，�
 
 ```text
 # 配置与诊断
-qqmailctl auth login --email you@qq.com
-qqmailctl doctor --json
-qqmailctl agent-info
+qqmail-cli auth login --email you@qq.com
+qqmail-cli doctor --json
+qqmail-cli agent-info
 
 # 读
-qqmailctl folder list --json
-qqmailctl envelope list --unread --limit 20 --json
-qqmailctl message show <id> [<id>...] --part text --json
-qqmailctl attachment list <id> --json
-qqmailctl export --all --output ./backup --json
+qqmail-cli folder list --json
+qqmail-cli envelope list --unread --limit 20 --json
+qqmail-cli message show <id> [<id>...] --part text --json
+qqmail-cli attachment list <id> --json
+qqmail-cli export --all --output ./backup --json
 
 # 理
-qqmailctl sync --json
-qqmailctl search "关键词" --local --json
-qqmailctl triage analyze --json
-qqmailctl triage plan --output plan.json --markdown plan.md [--rules my.toml]
-qqmailctl backup --plan plan.json --output ./backup
-qqmailctl clean --plan plan.json [--execute] [--paranoid]
-qqmailctl restore --plan plan.json [--execute]
-qqmailctl message mark-read <id>... [--execute]
-qqmailctl message move <id>... <folder> [--execute]
-qqmailctl watch --jsonl
-qqmailctl cache inspect | clear [--execute]
-qqmailctl audit list --json
+qqmail-cli sync --json
+qqmail-cli search "关键词" --local --json
+qqmail-cli triage analyze --json
+qqmail-cli triage plan --output plan.json --markdown plan.md [--rules my.toml]
+qqmail-cli backup --plan plan.json --output ./backup
+qqmail-cli clean --plan plan.json [--execute] [--paranoid]
+qqmail-cli restore --plan plan.json [--execute]
+qqmail-cli message mark-read <id>... [--execute]
+qqmail-cli message move <id>... <folder> [--execute]
+qqmail-cli watch --jsonl
+qqmail-cli cache inspect | clear [--execute]
+qqmail-cli audit list --json
 
 # 发
-qqmailctl send --to you@example.com --subject "主题" --body "正文" [--execute]
-qqmailctl reply <id> --body "..." [--execute]
-qqmailctl forward <id> --to you@example.com [--execute]
+qqmail-cli send --to you@example.com --subject "主题" --body "正文" [--execute]
+qqmail-cli reply <id> --body "..." [--execute]
+qqmail-cli forward <id> --to you@example.com [--execute]
 ```
 
 ## 10. 项目状态与边界

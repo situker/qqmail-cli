@@ -83,4 +83,4 @@ foreach ($Relative in @("README.md", "docs/index.md", ".goreleaser.yaml")) {
     }
 }
 
-Write-Output "qqmailctl documentation checks passed ($($MarkdownFiles.Count) Markdown files)"
+Write-Output "qqmail-cli documentation checks passed ($($MarkdownFiles.Count) Markdown files)"

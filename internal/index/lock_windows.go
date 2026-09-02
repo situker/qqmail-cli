@@ -23,7 +23,7 @@ func acquireProcessLock(path string) (*processLock, error) {
 	err = windows.LockFileEx(windows.Handle(file.Fd()), windows.LOCKFILE_EXCLUSIVE_LOCK|windows.LOCKFILE_FAIL_IMMEDIATELY, 0, 1, 0, &lock.overlapped)
 	if err != nil {
 		_ = file.Close()
-		return nil, fmt.Errorf("another qqmailctl process holds the cache lock: %w", err)
+		return nil, fmt.Errorf("another qqmail-cli process holds the cache lock: %w", err)
 	}
 	return lock, nil
 }

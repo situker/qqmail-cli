@@ -5,13 +5,13 @@ import (
 	"strings"
 
 	imap "github.com/emersion/go-imap/v2"
-	"github.com/situker/qqmailctl/internal/account"
-	"github.com/situker/qqmailctl/internal/errmap"
-	"github.com/situker/qqmailctl/internal/mailmodel"
+	"github.com/situker/qqmail-cli/internal/account"
+	"github.com/situker/qqmail-cli/internal/errmap"
+	"github.com/situker/qqmail-cli/internal/mailmodel"
 )
 
 // Mutator extends the read surface with the only server mutations allowed by
-// qqmailctl. Command code must reach these methods through internal/policy.
+// qqmail-cli. Command code must reach these methods through internal/policy.
 // LocateByIdentity is itself read-only (EXAMINE + UID SEARCH + PEEK fetches);
 // it lives here because its only consumers are mutation flows (restore, and
 // the conservative copy confirmation).

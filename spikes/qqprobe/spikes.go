@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/situker/qqmailctl/internal/account"
-	"github.com/situker/qqmailctl/internal/imapx"
+	"github.com/situker/qqmail-cli/internal/account"
+	"github.com/situker/qqmail-cli/internal/imapx"
 )
 
 func probeS1(named account.Named, authCode string, result *result) error {
@@ -31,7 +31,7 @@ func probeS1(named account.Named, authCode string, result *result) error {
 	if err != nil {
 		return err
 	}
-	bad, err := client.command("XQQMAILCTLPROBE")
+	bad, err := client.command("XQQMAILCLIPROBE")
 	if err != nil {
 		return err
 	}
@@ -77,7 +77,7 @@ func probeS2(named account.Named, authCode string, result *result) error {
 	}
 	result.Observations["login"] = responseSummary(loginClient, login)
 	if statusOK(login) {
-		idReply, idErr := loginClient.command(`ID ("name" "qqmailctl" "version" "0.3.0-dev")`)
+		idReply, idErr := loginClient.command(`ID ("name" "qqmail-cli" "version" "0.3.0-dev")`)
 		if idErr != nil {
 			loginClient.close()
 			return idErr
@@ -151,7 +151,7 @@ func probeS3(named account.Named, authCode string, result *result) error {
 func probeS4(named account.Named, authCode string, opts options, result *result) error {
 	if !opts.write || !writeGatesOpen() {
 		result.Status = "pending_manual_trigger"
-		result.Pending = append(result.Pending, "Set QQMAILCTL_E2E_WRITE=1 and QQMAILCTL_DEDICATED_TEST_ACCOUNT=1, then rerun with -write. Stop at the first failure; never retry it.")
+		result.Pending = append(result.Pending, "Set QQMAIL_CLI_E2E_WRITE=1 and QQMAIL_CLI_DEDICATED_TEST_ACCOUNT=1, then rerun with -write. Stop at the first failure; never retry it.")
 		return nil
 	}
 	if opts.maxLogins < 1 || opts.maxLogins > 10 {
@@ -230,8 +230,8 @@ func probeS5Writes(named account.Named, authCode string, result *result) error {
 		return fmt.Errorf("LOGIN failed")
 	}
 	stamp := time.Now().UTC().Format("20060102T150405Z")
-	source := "qqmailctl-probe-source-" + stamp
-	target := "qqmailctl-probe-target-" + stamp
+	source := "qqmail-cli-probe-source-" + stamp
+	target := "qqmail-cli-probe-target-" + stamp
 	for _, folder := range []string{source, target} {
 		reply, createErr := client.command("CREATE " + quoteIMAP(folder))
 		if createErr != nil || !statusOK(reply) {
@@ -244,8 +244,8 @@ func probeS5Writes(named account.Named, authCode string, result *result) error {
 		_, _ = client.command("DELETE " + quoteIMAP(target))
 	}
 	defer cleanup()
-	messageID := "<qqmailctl-probe-" + stamp + "@invalid>"
-	raw := []byte("From: probe@invalid\r\nTo: probe@invalid\r\nSubject: qqmailctl S5 synthetic probe\r\nMessage-ID: " + messageID + "\r\nDate: " + time.Now().Format(time.RFC1123Z) + "\r\n\r\nSynthetic probe owned by qqmailctl.\r\n")
+	messageID := "<qqmail-cli-probe-" + stamp + "@invalid>"
+	raw := []byte("From: probe@invalid\r\nTo: probe@invalid\r\nSubject: qqmail-cli S5 synthetic probe\r\nMessage-ID: " + messageID + "\r\nDate: " + time.Now().Format(time.RFC1123Z) + "\r\n\r\nSynthetic probe owned by qqmail-cli.\r\n")
 	appendReply, err := client.commandLiteral("APPEND "+quoteIMAP(source), raw)
 	if err != nil || !statusOK(appendReply) {
 		return fmt.Errorf("failed to append synthetic probe message")
@@ -392,7 +392,7 @@ func probeS8(named account.Named, authCode string, result *result) error {
 func probeS11(named account.Named, authCode string, opts options, result *result) error {
 	if !opts.write || !writeGatesOpen() {
 		result.Status = "pending_manual_trigger"
-		result.Pending = append(result.Pending, "Set QQMAILCTL_E2E_WRITE=1 and QQMAILCTL_DEDICATED_TEST_ACCOUNT=1, then rerun with -write. Only uniquely named folders created by this probe are touched.")
+		result.Pending = append(result.Pending, "Set QQMAIL_CLI_E2E_WRITE=1 and QQMAIL_CLI_DEDICATED_TEST_ACCOUNT=1, then rerun with -write. Only uniquely named folders created by this probe are touched.")
 		return nil
 	}
 	client, _, err := dialRawIMAP(named)
@@ -405,7 +405,7 @@ func probeS11(named account.Named, authCode string, opts options, result *result
 		return fmt.Errorf("LOGIN failed")
 	}
 	stamp := time.Now().UTC().Format("20060102T150405Z")
-	original := "qqmailctl探针-" + stamp
+	original := "qqmail-cli探针-" + stamp
 	renamed := original + "-已改名"
 	wireOriginal := imapx.EncodeMailbox(original)
 	wireRenamed := imapx.EncodeMailbox(renamed)
@@ -458,7 +458,7 @@ func probeReadonlySuite(named account.Named, authCode string, duration time.Dura
 		return err
 	}
 	postCaps := capabilities(post.Lines...)
-	bad, err := client.command("XQQMAILCTLPROBE")
+	bad, err := client.command("XQQMAILCLIPROBE")
 	if err != nil {
 		return err
 	}
@@ -488,7 +488,7 @@ func probeReadonlySuite(named account.Named, authCode string, duration time.Dura
 		"unsupported_command":     map[string]any{"status": bad.Status, "untagged_bad": containsUntaggedBAD(bad.Lines), "response_shape": normalizeLines(bad.Lines)},
 		"uid_fetch_shape":         fetchShape,
 	}
-	idReply, err := client.command(`ID ("name" "qqmailctl" "version" "0.3.0-dev")`)
+	idReply, err := client.command(`ID ("name" "qqmail-cli" "version" "0.3.0-dev")`)
 	if err != nil {
 		return err
 	}
@@ -640,7 +640,7 @@ func (c *rawIMAP) idle(duration time.Duration) (map[string]any, error) {
 }
 
 func writeGatesOpen() bool {
-	return os.Getenv("QQMAILCTL_E2E_WRITE") == "1" && os.Getenv("QQMAILCTL_DEDICATED_TEST_ACCOUNT") == "1"
+	return os.Getenv("QQMAIL_CLI_E2E_WRITE") == "1" && os.Getenv("QQMAIL_CLI_DEDICATED_TEST_ACCOUNT") == "1"
 }
 
 func containsUntaggedBAD(lines []string) bool {

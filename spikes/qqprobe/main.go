@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/situker/qqmailctl/internal/account"
-	"github.com/situker/qqmailctl/internal/output"
-	"github.com/situker/qqmailctl/internal/secrets"
+	"github.com/situker/qqmail-cli/internal/account"
+	"github.com/situker/qqmail-cli/internal/output"
+	"github.com/situker/qqmail-cli/internal/secrets"
 )
 
 type options struct {
@@ -50,7 +50,7 @@ func run() (exitCode int) {
 	var opts options
 	flag.StringVar(&opts.spike, "spike", "", "spike identifier S1 through S11")
 	flag.StringVar(&opts.output, "output", "", "optional JSON result path")
-	flag.StringVar(&opts.config, "config", "", "optional qqmailctl config path")
+	flag.StringVar(&opts.config, "config", "", "optional qqmail-cli config path")
 	flag.StringVar(&opts.account, "account", "", "configured account name")
 	flag.StringVar(&opts.label, "label", "current", "snapshot label")
 	flag.DurationVar(&opts.duration, "duration", 30*time.Second, "observation duration")

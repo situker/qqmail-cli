@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/situker/qqmailctl/internal/account"
-	"github.com/situker/qqmailctl/internal/errmap"
-	"github.com/situker/qqmailctl/internal/output"
-	"github.com/situker/qqmailctl/internal/policy"
-	"github.com/situker/qqmailctl/schemas"
+	"github.com/situker/qqmail-cli/internal/account"
+	"github.com/situker/qqmail-cli/internal/errmap"
+	"github.com/situker/qqmail-cli/internal/output"
+	"github.com/situker/qqmail-cli/internal/policy"
+	"github.com/situker/qqmail-cli/schemas"
 	"github.com/spf13/cobra"
 )
 
@@ -33,7 +33,7 @@ func newAgentInfoCommand(rt *Runtime) *cobra.Command {
 		data := map[string]any{
 			"cli_version": rt.Build.Version, "protocol_version": "1", "schema_versions": map[string]string{"output": "1", "manifest": "1", "plan": "1"},
 			"commands": commands, "risk_levels": []string{"read", "mutate", "destructive", "send"}, "readonly": policy.Readonly(),
-			"env_switches":    []string{"QQMAILCTL_READONLY", "QQMAILCTL_AUTH_CODE"},
+			"env_switches":    []string{"QQMAIL_CLI_READONLY", "QQMAIL_CLI_AUTH_CODE"},
 			"untrusted_paths": []string{"data.envelopes[].subject", "data.envelopes[].from", "data.envelopes[].to", "data.envelopes[].folder", "data.folders[].name", "data.messages[].subject", "data.messages[].body", "data.messages[].from", "data.messages[].to", "data.messages[].raw_base64", "data.attachments[].filename", "data.hits[].subject", "data.hits[].from_addr", "data.hits[].snippet", "data.destination", "data.trash_folder", "data.located[].restore_to", "$watch_event.envelope.subject", "$watch_event.envelope.from", "$watch_event.folder", "plan.items[].subject", "plan.items[].from", "data.summary.from", "data.summary.to[]", "data.summary.cc[]", "data.summary.bcc[]", "data.summary.subject", "data.summary.body_summary", "data.summary.attachments[].filename"},
 			"account":         accountInfo, "configured": configured,
 		}

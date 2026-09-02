@@ -1,9 +1,15 @@
-qqmailctl
-Copyright 2026 Situker
+qqmail-cli
+Copyright 2026 司徒K (Situ K)
 
-Licensed under the Apache License, Version 2.0 (see LICENSE).
+Author:     司徒K (Situ K)
+Homepage:   https://www.situking.com
+Repository: https://github.com/situker/qqmail-cli
 
-qqmailctl is an independent, unofficial project. It is not affiliated with,
+Licensed under the Apache License, Version 2.0 (see LICENSE). Redistributions,
+including modified versions, must retain this NOTICE file and the attribution
+above per Section 4(d) of the License.
+
+qqmail-cli is an independent, unofficial project. It is not affiliated with,
 endorsed by, or authorized by Tencent or QQ Mail. It works through the standard
 IMAP/SMTP services that users enable themselves, and it is unrelated to the
 qmail ecosystem's qmailctl tool.

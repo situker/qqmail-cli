@@ -1,4 +1,4 @@
-module github.com/situker/qqmailctl
+module github.com/situker/qqmail-cli
 
 go 1.25.0
 
