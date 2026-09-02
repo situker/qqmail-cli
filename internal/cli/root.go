@@ -74,6 +74,12 @@ func Execute(build BuildInfo) int {
 				_, _ = fmt.Fprintln(rt.Err, output.RedactString("建议："+failure.Suggestion))
 			}
 		}
+		// The JSON contract deliberately carries only curated messages; without
+		// a diagnostic channel an "internal" error is undebuggable. --verbose
+		// prints the redacted cause chain to stderr — never to stdout.
+		if rt.Verbose {
+			_, _ = fmt.Fprintln(rt.Err, output.RedactString("诊断（--verbose）："+err.Error()))
+		}
 		return code
 	}
 	return rt.resultCode

@@ -23,6 +23,27 @@ All notable development changes are recorded here. Formal releases remain owner-
 - Structured `failure_details` on export results so agents can tell retryable
   failures from permanent ones.
 
+### Fixed (2026-09-02, first real-mailbox triage run)
+
+- Bulk fetches no longer request server-parsed structure at all: a live QQ
+  mailbox contains messages whose malformed `BODYSTRUCTURE` **and** malformed
+  `ENVELOPE` responses each desync the go-imap wire parser and kill the whole
+  session, making `sync` permanently fail (see docs/compat/qq-20260902.md).
+  The server is now trusted only for numbers and flags; subject, addresses,
+  and date arrive as raw header literals and are parsed locally with
+  charset-aware lenient parsing (`ParseAddressListLenient`). A source-level
+  guard test keeps ENVELOPE/BODYSTRUCTURE out of bulk fetches;
+  `has_attachments` in bulk listings is documented as always false.
+- Header fetches request the full `BODY.PEEK[HEADER]` instead of
+  HEADER.FIELDS subsets: a live probe showed QQ answers HEADER.FIELDS with an
+  empty two-byte block while returning the complete header normally — every
+  header-fields fetch (Message-ID, List-Unsubscribe, Precedence) had been
+  silently empty against the real server while passing against the compliant
+  CI server. Fields are picked locally; a source-level guard bans
+  HEADER.FIELDS subsets from the client.
+- `--verbose` now prints the redacted underlying cause chain to stderr on
+  command failure; previously an `internal` error was undebuggable by design.
+
 ### Fixed (2026-09-01 pre-publication hardening round)
 
 - Every cobra usage failure now returns the JSON contract (usage/exit 2):

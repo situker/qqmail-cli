@@ -262,6 +262,22 @@ func (c *Client) Search(ctx context.Context, filter SearchFilter) ([]uint32, err
 	return result, nil
 }
 
+// bodySectionBytes returns the requested body section's bytes, tolerating
+// servers whose FETCH responses label the section differently from the
+// request. Live observation (2026-09-02, docs/compat/qq-20260902.md): QQ's
+// response section spec does not match what was requested, so the library's
+// FindBodySection silently returns nil. Every fetch here requests exactly one
+// section, so a response carrying exactly one is unambiguous.
+func bodySectionBytes(item *imapclient.FetchMessageBuffer, section *imap.FetchItemBodySection) []byte {
+	if data := item.FindBodySection(section); data != nil {
+		return data
+	}
+	if len(item.BodySection) == 1 {
+		return item.BodySection[0].Bytes
+	}
+	return nil
+}
+
 // filterUIDWindow drops UIDs outside the requested window. RFC 3501 defines
 // "N:*" as always matching the highest UID in the mailbox even when N exceeds
 // it, so a watermark search with no new mail still returns the newest message;
@@ -291,11 +307,11 @@ func (c *Client) FetchHeaderFields(ctx context.Context, ids []uint32) ([]mailmod
 	for i, id := range ids {
 		uids[i] = imap.UID(id)
 	}
-	section := &imap.FetchItemBodySection{
-		Specifier:    imap.PartSpecifierHeader,
-		HeaderFields: []string{"Message-ID", "List-Unsubscribe", "Precedence"},
-		Peek:         true,
-	}
+	// Full header, not a HEADER.FIELDS subset: QQ answers HEADER.FIELDS with
+	// an empty two-byte body while returning the complete header normally
+	// (live probe 2026-09-02, docs/compat/qq-20260902.md). Headers average a
+	// few KB per message; the fields are picked out locally.
+	section := &imap.FetchItemBodySection{Specifier: imap.PartSpecifierHeader, Peek: true}
 	if err := c.setDeadline(ctx); err != nil {
 		return nil, err
 	}
@@ -308,7 +324,7 @@ func (c *Client) FetchHeaderFields(ctx context.Context, ids []uint32) ([]mailmod
 	result := make([]mailmodel.HeaderFields, 0, len(items))
 	for _, item := range items {
 		fields := mailmodel.HeaderFields{UID: uint32(item.UID)}
-		message, readErr := mail.ReadMessage(strings.NewReader(string(item.FindBodySection(section))))
+		message, readErr := mail.ReadMessage(strings.NewReader(string(bodySectionBytes(item, section)) + "\r\n"))
 		if readErr == nil {
 			fields.MessageID = strings.TrimSpace(message.Header.Get("Message-ID"))
 			fields.ListUnsubscribe = strings.TrimSpace(message.Header.Get("List-Unsubscribe"))
@@ -328,38 +344,49 @@ func (c *Client) FetchEnvelopes(ctx context.Context, folder string, uidValidity 
 	for i, id := range ids {
 		uids[i] = imap.UID(id)
 	}
+	// QQ dialect hardening (2026-09-02, docs/compat/qq-20260902.md): QQ emits
+	// malformed ENVELOPE and BODYSTRUCTURE responses for some real messages,
+	// and either one desyncs go-imap's wire decoder and kills the session —
+	// one poison message would permanently break sync. The server is
+	// therefore trusted only for numbers and flags; every piece of structured
+	// text (subject, addresses, date) arrives as raw header bytes in a
+	// length-prefixed literal — which a noncompliant serializer cannot
+	// corrupt — and is parsed locally. The full header is requested because
+	// QQ answers HEADER.FIELDS subsets with an empty body. Attachment
+	// detection likewise parses the raw message locally.
+	section := &imap.FetchItemBodySection{Specifier: imap.PartSpecifierHeader, Peek: true}
 	if err := c.setDeadline(ctx); err != nil {
 		return nil, err
 	}
 	stop := c.watchdog(ctx)
 	defer stop()
-	items, err := c.raw.Fetch(imap.UIDSetNum(uids...), &imap.FetchOptions{UID: true, Envelope: true, Flags: true, InternalDate: true, RFC822Size: true, BodyStructure: &imap.FetchItemBodyStructure{}}).Collect()
+	items, err := c.raw.Fetch(imap.UIDSetNum(uids...), &imap.FetchOptions{UID: true, Flags: true, InternalDate: true, RFC822Size: true, BodySection: []*imap.FetchItemBodySection{section}}).Collect()
 	if err != nil {
 		return nil, err
 	}
 	result := make([]mailmodel.Envelope, 0, len(items))
 	for _, item := range items {
-		if item.Envelope == nil {
+		if item.UID == 0 {
 			continue
 		}
 		flags := make([]string, len(item.Flags))
 		for i, flag := range item.Flags {
 			flags[i] = string(flag)
 		}
-		hasAttachments := false
-		if item.BodyStructure != nil {
-			item.BodyStructure.Walk(func(_ []int, part imap.BodyStructure) bool {
-				if disp := part.Disposition(); disp != nil && strings.EqualFold(disp.Value, "attachment") {
-					hasAttachments = true
-				}
-				return true
-			})
-		}
-		result = append(result, mailmodel.Envelope{
+		envelope := mailmodel.Envelope{
 			ID: mailmodel.MsgID{Folder: folder, UIDValidity: uidValidity, UID: uint32(item.UID)}.String(), UID: uint32(item.UID), UIDValidity: uidValidity,
-			Folder: folder, Subject: item.Envelope.Subject, From: addresses(item.Envelope.From), To: addresses(item.Envelope.To), Date: item.Envelope.Date,
-			InternalDate: item.InternalDate, Size: item.RFC822Size, Flags: flags, HasAttachments: hasAttachments,
-		})
+			Folder: folder, From: []mailmodel.Address{}, To: []mailmodel.Address{}, Date: item.InternalDate,
+			InternalDate: item.InternalDate, Size: item.RFC822Size, Flags: flags, HasAttachments: false,
+		}
+		if message, readErr := mail.ReadMessage(strings.NewReader(string(bodySectionBytes(item, section)) + "\r\n")); readErr == nil {
+			envelope.Subject = mailmodel.DecodeHeaderText(message.Header.Get("Subject"))
+			envelope.From = mailmodel.ParseAddressListLenient(message.Header.Get("From"))
+			envelope.To = mailmodel.ParseAddressListLenient(message.Header.Get("To"))
+			if date, dateErr := message.Header.Date(); dateErr == nil {
+				envelope.Date = date
+			}
+		}
+		result = append(result, envelope)
 	}
 	sort.Slice(result, func(i, j int) bool { return result[i].UID > result[j].UID })
 	return result, nil
@@ -394,7 +421,7 @@ func (c *Client) FetchBodyPeek(ctx context.Context, id mailmodel.MsgID, maxBytes
 	if len(items) == 0 {
 		return nil, false, &errmap.Error{Kind: errmap.NotFound, Message: "邮件不存在", Context: map[string]any{"id": id.String()}}
 	}
-	raw := items[0].FindBodySection(section)
+	raw := bodySectionBytes(items[0], section)
 	truncated := int64(len(raw)) > maxBytes
 	if truncated {
 		raw = raw[:maxBytes]

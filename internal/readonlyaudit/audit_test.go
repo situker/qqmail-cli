@@ -113,6 +113,28 @@ func TestProtocolUsesExamineAndPeek(t *testing.T) {
 	}
 }
 
+// Live observation 2026-09-02 (docs/compat/qq-20260902.md): QQ emits
+// malformed ENVELOPE and BODYSTRUCTURE responses for some real messages, and
+// either one desyncs the go-imap wire parser and kills the session. Bulk
+// fetches must never request server-parsed structure: structured text arrives
+// as raw header literals and is parsed locally.
+func TestBulkFetchNeverRequestsServerParsedStructure(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join(projectRoot(t), "internal", "imapx", "client.go"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	source := string(raw)
+	if strings.Contains(source, "FetchItemBodyStructure") {
+		t.Fatal("a fetch in client.go requests BODYSTRUCTURE; QQ's malformed responses would poison the session (see docs/compat/qq-20260902.md)")
+	}
+	if strings.Contains(source, "Envelope: true") {
+		t.Fatal("a fetch in client.go requests server-parsed ENVELOPE; QQ's malformed responses would poison the session (see docs/compat/qq-20260902.md)")
+	}
+	if strings.Contains(source, "HeaderFields:") {
+		t.Fatal("a fetch in client.go requests a HEADER.FIELDS subset; QQ answers those with an empty body — request the full header and pick fields locally (see docs/compat/qq-20260902.md)")
+	}
+}
+
 func projectRoot(t *testing.T) string {
 	t.Helper()
 	_, file, _, ok := runtime.Caller(0)
