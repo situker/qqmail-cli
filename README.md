@@ -55,7 +55,7 @@ $ qqmailctl message show "m1_eyJmIjoiSU5CT1giLCJ2IjoxNDI1LCJ1Ijo4MzQ3fQ" \
 
 ## 文档直达
 
-[五分钟上手](#五分钟上手) · [完整使用手册](docs/USER_GUIDE.md) · [Agent 使用纪律](#给-ai-agent-用) · [安全模型](#安全模型) · [架构说明](docs/ARCHITECTURE.md) · [FAQ](#faq)
+[五分钟上手](#五分钟上手) · [功能与设计全景](docs/OVERVIEW.md) · [完整使用手册](docs/USER_GUIDE.md) · [Agent 使用纪律](#给-ai-agent-用) · [安全模型](#安全模型) · [架构说明](docs/ARCHITECTURE.md) · [FAQ](#faq)
 
 ## 为什么是 qqmailctl
 
