@@ -95,6 +95,12 @@ func normalizeToken(value string) string {
 var (
 	noreplyPattern      = regexp.MustCompile(`(?i)(^|[._+-])(no-?reply|do-?not-?reply|notification|mailer-daemon)([._+@-]|$)`)
 	verificationPattern = regexp.MustCompile(`(?i)(验证码|校验码|动态码|一次性密码|verification\s*code|security\s*code|otp)`)
+	// transactionalPattern protects purchase/billing mail from the marketing
+	// rule: vendors (Apple, brokers, utilities) attach List-Unsubscribe
+	// headers to receipts and order notices, and a wrongly kept newsletter is
+	// vastly cheaper than a wrongly cleaned receipt. Checked before the
+	// List-Unsubscribe rule; custom rules still override everything.
+	transactionalPattern = regexp.MustCompile(`(?i)(订单|发货|收据|发票|对账单|账单|扣款|退款|付款|支付成功|交易提醒|receipt|invoice|your order|order confirm|order shipped|payment (received|confirmation)|statement|renewal notice)`)
 )
 
 var socialDomains = map[string]bool{"linkedin.com": true, "facebookmail.com": true, "weibo.com": true, "zhihu.com": true}
@@ -216,6 +222,17 @@ func classify(message index.Message, rules []Rule) (string, float64, string, []s
 			return rule.Category, rule.Confidence, rule.Reason, evidence
 		}
 	}
+	domain := fromDomain(message.FromAddr)
+	// Government senders are never cleanup material: trademark/patent office
+	// and administrative notices routinely look like machine notifications.
+	if domain == "gov.cn" || strings.HasSuffix(domain, ".gov.cn") {
+		return "official_notice", .95, "government sender domain", []string{"from_domain:" + domain}
+	}
+	// Transactional mail outranks the marketing heuristics: an unsubscribe
+	// header on an order confirmation does not make it a newsletter.
+	if transactionalPattern.MatchString(message.Subject) {
+		return "receipt", .90, "transactional subject pattern", []string{"subject_pattern:transactional"}
+	}
 	if message.ListUnsubscribe != "" {
 		return "marketing", .98, "List-Unsubscribe header is present", []string{"header:List-Unsubscribe"}
 	}
@@ -225,7 +242,6 @@ func classify(message index.Message, rules []Rule) (string, float64, string, []s
 	if verificationPattern.MatchString(message.Subject) {
 		return "verification", .96, "verification-code subject pattern", []string{"subject_pattern:verification_code"}
 	}
-	domain := fromDomain(message.FromAddr)
 	if domainListed(domain, socialDomains) {
 		return "social_notification", .86, "known social notification sender domain", []string{"from_domain:" + domain}
 	}

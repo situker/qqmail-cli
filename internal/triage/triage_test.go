@@ -88,6 +88,37 @@ func TestSafetyScopeExclusions(t *testing.T) {
 	}
 }
 
+// Transactional and government mail must beat the marketing heuristics: a
+// wrongly kept newsletter is cheap, a wrongly cleaned receipt is not.
+func TestTransactionalAndGovernmentProtection(t *testing.T) {
+	now := time.Date(2026, 9, 2, 12, 0, 0, 0, time.UTC)
+	old := now.Add(-90 * 24 * time.Hour)
+	cases := []struct {
+		name     string
+		message  index.Message
+		category string
+	}{
+		{"apple_receipt_with_unsub", index.Message{ID: "a", Folder: "INBOX", Subject: "你的订单已发货", FromAddr: "order@example-store.com", ListUnsubscribe: "<mailto:x@example.com>", DateHeader: old, InternalDate: old}, "receipt"},
+		{"english_receipt_with_unsub", index.Message{ID: "b", Folder: "INBOX", Subject: "Your receipt from Example Store", FromAddr: "billing@example-store.com", ListUnsubscribe: "yes", DateHeader: old, InternalDate: old}, "receipt"},
+		{"statement_noreply", index.Message{ID: "c", Folder: "INBOX", Subject: "8 月对账单", FromAddr: "noreply@example-broker.com", DateHeader: old, InternalDate: old}, "receipt"},
+		{"gov_notice", index.Message{ID: "d", Folder: "INBOX", Subject: "商标初步审定公告", FromAddr: "notice@sub.gov.cn", DateHeader: old, InternalDate: old}, "official_notice"},
+		{"plain_newsletter_still_marketing", index.Message{ID: "e", Folder: "INBOX", Subject: "本周新品速递", FromAddr: "news@example-store.com", ListUnsubscribe: "yes", DateHeader: old, InternalDate: old}, "marketing"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			plan, analysis := Build([]index.Message{tc.message}, nil, now, permissiveOptions())
+			if analysis.ByCategory[tc.category].Count != 1 {
+				t.Fatalf("category=%+v, want %s", analysis.ByCategory, tc.category)
+			}
+			// Only marketing is cleanup-eligible among these fixtures.
+			wantInPlan := tc.category == "marketing"
+			if (len(plan.Items) == 1) != wantInPlan {
+				t.Fatalf("plan inclusion=%v, want %v (%+v)", len(plan.Items) == 1, wantInPlan, plan.Items)
+			}
+		})
+	}
+}
+
 func TestExcludeCategoryNarrowsDefaults(t *testing.T) {
 	now := time.Now()
 	old := now.Add(-90 * 24 * time.Hour)

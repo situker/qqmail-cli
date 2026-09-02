@@ -213,6 +213,8 @@ $list.data.envelopes | Select-Object date, from, subject, id
 - 只扫当前 `--folder`（默认 INBOX）；`--all-folders` 才会扩大到全部已索引文件夹。
 - 只纳入 30 天前的邮件（`--min-age`，`0` 关闭）且分类置信度 ≥ 0.8（`--min-confidence`）。
 - **星标（`\Flagged`）邮件永远不进计划，也没有任何开关能放行**——星标是你亲手做的"重要"标记，优先级高于一切规则；clean 执行前还会对服务器上的星标状态再查一次。
+- **交易与官方邮件优先于营销判定**：带退订头的邮件若主题命中交易模式（订单/发货/收据/发票/对账单/扣款/退款/receipt/invoice/statement 等）归为 `receipt`，政府域名（`*.gov.cn`）归为 `official_notice`——两类都不在清理目标里。厂商给收据也挂退订头是常态，错留一封快讯远比错删一张收据便宜。
+- **个人保护规则**（`--rules` TOML）优先于全部内置规则：把你业务相关的发件人/主题写成 `category = "keep"`，即可永久排除在清理计划外；边界拿不准的簇，建议先抽样主题人工判断再定规则。
 
 被排除的数量与原因在 `triage plan` 输出的 `excluded_by_rule` 和 `plan.md` 头部逐项列出。不想清理的条目，直接从 `plan.json` 的 `items` 里删掉即可。
 
