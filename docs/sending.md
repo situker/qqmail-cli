@@ -47,4 +47,4 @@ qqmailctl forward <opaque-id> --to you@example.com --body "转发说明"
 - QQ 默认优先 465 隐式 TLS；只有连接建立失败才尝试 587 STARTTLS。TLS 最低版本为 1.2。
 - 所有发送尝试与结果写 SQLite audit 表及内容无关的 JSONL；审计不记录授权码、地址、主题、正文或附件名。
 
-S9 真实发送配额探针尚未运行。只有专用测试邮箱、双重写门和自发自收件人条件同时满足时，owner 才能按 `docs/OWNER_CHECKLIST.md` 触发。
+S9 真实发送配额探针尚未运行。只有专用测试邮箱、双重写门（`QQMAILCTL_E2E_WRITE=1` + `QQMAILCTL_DEDICATED_TEST_ACCOUNT=1`）和自发自收件人条件同时满足时才能触发。

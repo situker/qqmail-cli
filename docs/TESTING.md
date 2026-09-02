@@ -188,7 +188,7 @@ $env:QQMAILCTL_E2E_WRITE = '1'
 $env:QQMAILCTL_DEDICATED_TEST_ACCOUNT = '1'
 ```
 
-依次按 [Owner 清单](OWNER_CHECKLIST.md) 运行 S4、S5 写阶段、S9、S11。S7 第二快照与 S8 需要人工网页设置或另一台主机。
+依次运行 spike 探针的写阶段（频控 S4、写路径 S5、发送配额 S9、中文夹写 S11）；网页收取选项快照与新 IP 登录验证需要人工网页设置或另一台主机。
 
 ### H2. 真实发送
 
@@ -226,4 +226,4 @@ $env:QQMAILCTL_READONLY = '1'
 | 发送 dry-run | 自动化契约已通过；待 owner 看摘要 | 不记录真实地址或正文 |
 | 真实 SMTP/服务器写入 | 待专用邮箱人工触发 | `docs/compat/` 新增带日期脱敏记录 |
 
-P0 全部通过后进入 [2026-09-02 开源发布清单](RELEASE_CHECKLIST.md)。
+P0 全部通过、真实账号只读冒烟无误后，即可发布。

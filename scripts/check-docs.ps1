@@ -10,12 +10,11 @@ $Required = @(
     "CONTRIBUTING.md",
     "CODE_OF_CONDUCT.md",
     "docs/index.md",
+    "docs/OVERVIEW.md",
     "docs/INTRODUCTION.md",
     "docs/USER_GUIDE.md",
     "docs/ARCHITECTURE.md",
-    "docs/DEVELOPMENT_SUMMARY.md",
-    "docs/TESTING.md",
-    "docs/RELEASE_CHECKLIST.md"
+    "docs/TESTING.md"
 )
 
 foreach ($Relative in $Required) {
@@ -31,8 +30,7 @@ $PublicRootMarkdown = @(
     "CHANGELOG.md",
     "CONTRIBUTING.md",
     "SECURITY.md",
-    "CODE_OF_CONDUCT.md",
-    "IMPLEMENTATION_STATUS.md"
+    "CODE_OF_CONDUCT.md"
 )
 
 $MarkdownFiles = @(

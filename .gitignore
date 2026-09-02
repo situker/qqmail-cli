@@ -5,6 +5,6 @@
 /*.exe
 *.test
 *.prof
-/_internal/
 .idea/
 .vscode/
+*.stackdump
