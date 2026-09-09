@@ -1,6 +1,6 @@
 module github.com/situker/qqmail-cli
 
-go 1.25.0
+go 1.26.0
 
 require (
 	github.com/cention-sany/utf7 v0.0.0-20170124080048-26cad61bd60a
@@ -15,7 +15,7 @@ require (
 	github.com/spf13/cobra v1.10.2
 	github.com/zalando/go-keyring v0.2.8
 	golang.org/x/net v0.56.0
-	golang.org/x/sys v0.47.0
+	golang.org/x/sys v0.48.0
 	golang.org/x/term v0.45.0
 	golang.org/x/text v0.39.0
 	modernc.org/sqlite v1.57.0
