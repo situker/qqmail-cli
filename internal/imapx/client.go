@@ -105,6 +105,14 @@ func dialWithVersion(ctx context.Context, cfg account.Named, authCode string, tl
 		return nil, err
 	}
 	stopBefore := client.watchdog(ctx)
+	// QQ drops a command pipelined before its greeting is read. CAPABILITY
+	// then never completes, and the watchdog's socket close is reported as a
+	// bare "unexpected EOF".
+	if err := client.raw.WaitGreeting(); err != nil {
+		stopBefore()
+		client.close()
+		return nil, &errmap.Error{Kind: errmap.Network, Message: "等待 IMAP 服务器问候失败", Suggestion: "检查网络后重试；若刚刚频繁登录，请等待 10-15 分钟", Cause: err}
+	}
 	before, err := client.raw.Capability().Wait()
 	stopBefore()
 	if err != nil {
